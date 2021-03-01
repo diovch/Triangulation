@@ -81,7 +81,7 @@ public:
 
     std::vector<Vertex> vertices;
     std::vector<Triangle> triangles;
-    R3Graph::R3Point imageCenter = R3Graph::R3Point();
+    //R3Graph::R3Point imageCenter = R3Graph::R3Point();
     R3Graph::R3Box box;
 
 public:
@@ -99,6 +99,14 @@ public:
     bool save(const char *path) const;
     bool load(const char *path);
     void TriangulationOfTetrahedron(R3Graph::Tetrahedron& tetrahedron);
+    //|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+    //void Triangulation::taubinSmoothing(
+    //    int iterations /* = 1 */,
+    //    double lambda /* = 0.330 */,
+    //    double mu /* = 0.331 */,
+    //    bool useCotangentLaplace /* = false */);
+
+    //void Triangulation::defineTrianglesOfVertices() const;
 };
 
 #endif

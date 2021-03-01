@@ -16,7 +16,8 @@ add_library(IsoLib STATIC
 			pi.h
 			Triangulation.h Triangulation.cpp
 			matrix.h
-			r2geom.h r2geom.cpp)
+			r2geom.h r2geom.cpp
+			skala.h skala.cpp)
 
 add_executable(IsoTest startUp.cxx)
 

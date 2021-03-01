@@ -4,6 +4,7 @@
 #include <cctype>
 #include <clocale>
 #include <cassert>
+#include <set>
 #include "Triangulation.h"
 
 using namespace R3Graph;
@@ -86,8 +87,8 @@ void Triangulation::orientate() {
         //R3Vector meanN = (v0.normal + v1.normal + v2.normal)*(1./3.);
         t.Normal = (p1 - p0).vectorProduct(p2 - p0);
         t.Normal.normalize();
-        R3Vector Outward = p0 - imageCenter;
-        if (Outward.scalarProduct(t.Normal) < 0.){}
+        //R3Vector Outward = p0 - imageCenter;
+        //if (Outward.scalarProduct(t.Normal) < 0.){}
         //    t.RightHand();
     }
 }
@@ -577,12 +578,16 @@ void Triangulation::TriangulationOfTetrahedron(R3Graph::Tetrahedron& tetrahedron
 {
     std::vector<int> TriangleIndices;
     TriangleIndices.clear();
+    std::set<int> EdgesWithPoints;
 
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < 6; ++i) 
+    {
         double thrfun1 = tetrahedron.edges[i].A.second;
         double thrfun2 = tetrahedron.edges[i].B.second;
-        if (thrfun1 * thrfun2 < 0.) {
-            if (tetrahedron.edges[i].index == 0) {
+        if (thrfun1 * thrfun2 < 0.) 
+        {
+            if (tetrahedron.edges[i].index == 0) 
+            {
 
                 R3Point v = tetrahedron.edges[i].PointOnEdge();
                 vertices.push_back(v);
@@ -590,15 +595,17 @@ void Triangulation::TriangulationOfTetrahedron(R3Graph::Tetrahedron& tetrahedron
                 tetrahedron.edges[i].index = (int)vertices.size() - 1;
                 TriangleIndices.push_back(tetrahedron.edges[i].index);
             }
-            else {
+            else 
+            {
                 // vertex has already computed
                 TriangleIndices.push_back(tetrahedron.edges[i].index);
             }
-
+            EdgesWithPoints.insert(i);
         }
     }
     // Add triangles
-    if (TriangleIndices.size() == 3) {
+    if (TriangleIndices.size() == 3) 
+    {
         Triangle t1(TriangleIndices[0],
             TriangleIndices[1],
             TriangleIndices[2]);
@@ -623,3 +630,79 @@ void Triangulation::TriangulationOfTetrahedron(R3Graph::Tetrahedron& tetrahedron
         triangles.push_back(t2);
     }
 }
+//|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+
+//void Triangulation::defineTrianglesOfVertices() const {
+//    trianglesOfEdges.clear();
+//
+//    trianglesOfVertices.resize(vertices.size());
+//    for (size_t i = 0; i < trianglesOfVertices.size(); ++i)
+//        trianglesOfVertices.at(i).clear();
+//
+//    // Adjacent triangles for each vertex
+//    for (size_t i = 0; i < triangles.size(); ++i) {
+//        const Triangle& triangle = triangles.at(i);
+//        for (int j = 0; j < 3; ++j) {
+//            int v = triangle[j];
+//            trianglesOfVertices.at(v).push_back(i);
+//
+//            int w = triangle[(j + 1) % 3];
+//            Edge e(v, w);
+//            trianglesOfEdges[e].push_back(i);
+//        }
+//    }
+//    trianglesOfVerticesCalculated = true;
+//
+//    // starsOfVertices.clear();
+//    starsOfVertices.resize(vertices.size());
+//    for (int v = 0; v < int(vertices.size()); ++v) {
+//        starsOfVertices.at(v).clear();
+//        const TrianglesOfVertex& vertexTriangles = trianglesOfVertices.at(v);
+//        for (int t = 0; t < int(vertexTriangles.size()); ++t) {
+//            int triangleIdx = vertexTriangles[t];
+//            const Triangle& triangle = triangles.at(triangleIdx);
+//            for (int j = 0; j < 3; ++j) {
+//                int w = triangle[j];
+//                if (w != v) {
+//                    starsOfVertices.at(v).insert(w);
+//                }
+//            }
+//        }
+//    }
+//
+//    ringsOfVertices.resize(vertices.size());
+//    for (size_t v = 0; v < vertices.size(); ++v) {
+//        computeVertexRing(v, ringsOfVertices.at(v));
+//    }
+//}
+//
+//void Triangulation::taubinSmoothing(
+//    int iterations /* = 1 */,
+//    double lambda /* = 0.330 */,
+//    double mu /* = 0.331 */,
+//    bool useCotangentLaplace /* = false */
+//) {
+//    defineTrianglesOfVertices();
+//    assert(starsOfVertices.size() == vertices.size());
+//
+//    if (useCotangentLaplace) {
+//        for (int i = 0; i < iterations; ++i) {
+//            cotangentLaplaceSmoothing(
+//                lambda
+//            );
+//            cotangentLaplaceSmoothing(
+//                -mu
+//            );
+//        }
+//    }
+//    else {
+//        for (int i = 0; i < iterations; ++i) {
+//            uniformLaplaceSmoothing(
+//                lambda
+//            );
+//            uniformLaplaceSmoothing(
+//                -mu
+//            );
+//        }
+//    }
+//}

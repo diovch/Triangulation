@@ -75,14 +75,22 @@ int main(int argc, char* argv[])
 	
 	Triangulation triangulation;
 	
-	computeTriangulationOfVoxelSet_MY(
-		pointer, 
-		threshold,
-		triangulation,
-		voxelSet,
-		{ 0,0,0 },
-		x_sc, y_sc, z_sc
-	);
+	if (1)
+		computeTriangulationOfVoxelSet_MY(
+			pointer,
+			threshold,
+			triangulation,
+			voxelSet,
+			{ 0,0,0 },
+			x_sc, y_sc, z_sc
+		);
+	else
+		computeTriangulationOfVoxelSet(
+			triangulation,
+			voxelSet,
+			{ 0,0,0 },
+			x_sc, y_sc, z_sc
+		);
 
 	std::ofstream out;
 	std::string FileName = "C:\\Users\\owchi\\source\\repos\\TEST\\bin\\IsoSurface.stl";
