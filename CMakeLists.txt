@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 3.18)
 project(IsoTest)
 
 # Find ITK.
+#set(ITK_DIR, C:\\InsightToolkit-5.1.2\\bin)
 find_package(ITK REQUIRED)
 include(${ITK_USE_FILE})
 
@@ -17,7 +18,8 @@ add_library(IsoLib STATIC
 			Triangulation.h Triangulation.cpp
 			matrix.h
 			r2geom.h r2geom.cpp
-			skala.h skala.cpp)
+			skala.h skala.cpp
+			BinHeap.h BinHeap.cpp)
 
 add_executable(IsoTest startUp.cxx)
 

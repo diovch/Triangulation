@@ -858,6 +858,9 @@ void computeTriangulationOfVoxelSet(
             } // end for (ix...
         } // end for (iy...
     } // end for (slice...
+
+    if(1)
+        triangulation.taubinSmoothing(1, 0.3, 0.3, false);
 }
 
 void computeTriangulationOfVoxelSet_MY(

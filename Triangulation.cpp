@@ -6,8 +6,12 @@
 #include <cassert>
 #include <set>
 #include "Triangulation.h"
+#include "BinHeap.h"
 
 using namespace R3Graph;
+
+static const int TEST_MAX_TRIANGLES = 0;
+static const int TEST_MAX_EDGES = 1000;
 
 // Parsing of XML-file
 static bool extractTag(FILE* f, int& tag, bool& closing);
@@ -629,5 +633,1214 @@ void Triangulation::TriangulationOfTetrahedron(R3Graph::Tetrahedron& tetrahedron
             vertices[TriangleIndices[2]].point, vertices[TriangleIndices[3]].point);
         triangles.push_back(t2);
     }
+}
+//--------------------------------------------------------------------------------------------------------------
+R3Point Triangulation::center() const {
+    return (box.origin + box.size * 0.5);
+}
+//
+void Triangulation::computeNormals() {
+    if (!trianglesOfVerticesCalculated) {
+        defineTrianglesOfVertices();
+    }
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        Vertex& v = vertices.at(i);
+        const TrianglesOfVertex& triangs = trianglesOfVertices.at(i);
+        R3Vector sum(0., 0., 0.);
+        for (size_t t = 0; t < triangs.size(); ++t) {
+            const Triangle& tr = triangles.at(triangs[t]);
+            R3Point p0 = vertices.at(tr[0]).point;
+            R3Point p1 = vertices.at(tr[1]).point;
+            R3Point p2 = vertices.at(tr[2]).point;
+            R3Vector v1 = p1 - p0; v1.normalize();
+            R3Vector v2 = p2 - p0; v2.normalize();
+            R3Vector n = v1.vectorProduct(v2);
+            n.normalize();
+            sum += n;
+        }
+        if (triangs.size() > 0) {
+            sum *= 1. / (double)triangs.size();
+        }
+        v.normal = sum;
+    }
+}
+//
+//void Triangulation::refine() {  // Remove double vertices
+//    Triangulation t;
+//    std::map<R3Point, int> pointIdx;
+//    std::map<int, int> newVertexIdx;
+//    int numNewVertices = 0;
+//    for (int i = 0; i < (int)vertices.size(); ++i) {
+//        const Vertex& v = vertices[i];
+//        if (pointIdx.count(v.point) == 0) {
+//            t.vertices.push_back(v);
+//            pointIdx[v.point] = numNewVertices;
+//            newVertexIdx[i] = numNewVertices;
+//            ++numNewVertices;
+//        }
+//        else {
+//            // Double point found
+//            newVertexIdx[i] = pointIdx[v.point];
+//        }
+//    }
+//    //Q_ASSERT(numNewVertices == (int)t.vertices.size());
+//
+//    //qDebug() << "refine(): vertices=" << vertices.size() <<
+//    //    " different vertices=" << numNewVertices << "\n";
+//
+//    //if (numNewVertices == (int)vertices.size()) {
+//    //    qDebug() << "refine(): no double vertices!\n";
+//    //    return;
+//    //}
+//
+//    std::set<Triangle> triangleSet;
+//    for (int i = 0; i < (int)triangles.size(); ++i) {
+//        const Triangle& tr = triangles[i];
+//        Triangle newTriangle(
+//            newVertexIdx[tr[0]],
+//            newVertexIdx[tr[1]],
+//            newVertexIdx[tr[2]]
+//        );
+//        if (triangleSet.count(newTriangle) > 0)
+//            continue;   // The triangle is already presented, skip it
+//        t.triangles.push_back(newTriangle);
+//    }
+//    /*qDebug() << "refine(): triangles=" << triangles.size() <<
+//        " different triangles=" << t.triangles.size() << "\n";*/
+//
+//    t.computeFramingBox();
+//    clear();    //???
+//    *this = t;
+//}
+
+void Triangulation::defineAdjacentTriangles() const {
+    invalidateAdjacentTriangles();
+    if (adjacentTriangles == 0)
+        adjacentTriangles = new std::vector<AdjacentTriangles>;
+    adjacentTriangles->resize(triangles.size());
+
+    // Adjacent triangles for each triangle
+    std::map<Edge, int> triangleOfEdge;
+    for (size_t i = 0; i < triangles.size(); ++i) {
+        const Triangle& triangle = triangles[i];
+        for (int j = 0; j < 3; ++j) {
+            int k = j + 1;
+            if (k >= 3)
+                k = 0;
+            Edge e(triangle[j], triangle[k]);
+            if (triangleOfEdge.count(e) == 0) {
+                triangleOfEdge[e] = i;
+            }
+            else {
+                adjacentTriangles->at(triangleOfEdge[e]).add(i);
+                adjacentTriangles->at(i).add(triangleOfEdge[e]);
+            }
+        }
+    }
+
+    adjacentTrianglesCalculated = true;
+}
+
+void Triangulation::defineTrianglesOfVertices() const {
+    trianglesOfEdges.clear();
+
+    trianglesOfVertices.resize(vertices.size());
+    for (size_t i = 0; i < trianglesOfVertices.size(); ++i)
+        trianglesOfVertices.at(i).clear();
+
+    // Adjacent triangles for each vertex
+    for (size_t i = 0; i < triangles.size(); ++i) {
+        const Triangle& triangle = triangles.at(i);
+        for (int j = 0; j < 3; ++j) {
+            int v = triangle[j];
+            trianglesOfVertices.at(v).push_back(i);
+
+            int w = triangle[(j + 1) % 3];
+            Edge e(v, w);
+            trianglesOfEdges[e].push_back(i);
+        }
+    }
+    trianglesOfVerticesCalculated = true;
+
+    // starsOfVertices.clear();
+    starsOfVertices.resize(vertices.size());
+    for (int v = 0; v < int(vertices.size()); ++v) {
+        starsOfVertices.at(v).clear();
+        const TrianglesOfVertex& vertexTriangles = trianglesOfVertices.at(v);
+        for (int t = 0; t < int(vertexTriangles.size()); ++t) {
+            int triangleIdx = vertexTriangles[t];
+            const Triangle& triangle = triangles.at(triangleIdx);
+            for (int j = 0; j < 3; ++j) {
+                int w = triangle[j];
+                if (w != v) {
+                    starsOfVertices.at(v).insert(w);
+                }
+            }
+        }
+    }
+
+    ringsOfVertices.resize(vertices.size());
+    for (size_t v = 0; v < vertices.size(); ++v) {
+        computeVertexRing(v, ringsOfVertices.at(v));
+    }
+}
+
+//int Triangulation::defineLinkedComponents() const {
+//    if (!adjacentTrianglesCalculated)
+//        defineAdjacentTriangles();
+//
+//    clearLinkedComponents();
+//
+//    if (linkedComponents == 0)
+//        linkedComponents = new std::vector<LinkedComponent>;
+//
+//    int numTriangles = (int)triangles.size();
+//    if (numTriangles == 0)
+//        return 0;
+//
+//    BinHeapMin<char> heap(numTriangles);
+//
+//    int* triangleIndex = new int[numTriangles];
+//    int* heapIndex = new int[numTriangles];
+//    memset(heapIndex, (char)(-1), numTriangles * sizeof(int));
+//
+//    int infinity = 4;
+//
+//    int i = 0;  // Index in heap
+//    for (int t = 0; t < numTriangles; ++t) {
+//        heap.elements[i] = (char)infinity;    // Infinite distance
+//        triangleIndex[i] = t;
+//        heapIndex[t] = i;
+//        ++i;
+//    }
+//
+//    heap.indexArray = triangleIndex;
+//    heap.heapIndex = heapIndex;
+//    heap.numElems = numTriangles;
+//
+//    int initialTriangle = 0;
+//    int numComponents = 0;
+//    int totalVisited = 0;
+//
+//    while (heap.numElems > 0) {
+//        // Add new empty component to the list
+//        linkedComponents->push_back(LinkedComponent());
+//
+//        int initialTriangleIndexInHeap = heap.heapIndex[initialTriangle];
+//        heap.elements[initialTriangleIndexInHeap] = 0;  // Zero distance
+//        heap.bubbleUp(initialTriangleIndexInHeap);
+//
+//        int numVisited = 0;
+//
+//        while (heap.numElems > 0 && heap.root() < infinity) {
+//            //... int currentDistance = heap.root();
+//            int current = heap.rootIndex();
+//            heapIndex[current] = (-1);  // Remove triangle from heap
+//            heap.removeRoot();
+//            linkedComponents->back().push_back(current);
+//            ++numVisited;
+//
+//            if (heap.numElems == 0)
+//                break;
+//
+//            //... int newDistance = currentDistance + 1;
+//            for (int j = 0; j < 3; ++j) {
+//                int neighbor =
+//                    adjacentTriangles->at(current).adjacentTriangles[j];
+//                if (neighbor < 0)
+//                    break;
+//                int neighborIndexInHeap = heapIndex[neighbor];
+//                if (neighborIndexInHeap < 0)    // Already visited
+//                    continue;
+//
+//                if (heap.elements[neighborIndexInHeap] != 0) {
+//                    heap.elements[neighborIndexInHeap] = 0; // Mark as visited
+//                    heap.bubbleUp(neighborIndexInHeap);
+//                }
+//            }
+//        } // end while (heap.root() < infinity)
+//
+//        totalVisited += numVisited;
+//        ++numComponents;
+//
+//        //qDebug() <<
+//        //    "Linked component " << numComponents <<
+//        //    " is extracted: numTriangles=" << numVisited <<
+//        //    " totalVisited=" << totalVisited << "\n";
+//
+//        // Define the first unvisited triangle
+//        if (heap.numElems > 0)
+//            initialTriangle = heap.rootIndex();
+//        else
+//            initialTriangle = (-1);
+//    } // end while
+//
+//    //qDebug() <<
+//    //    "Total linked components: " << numComponents <<
+//    //    ", triangles: " << totalVisited << "\n";
+//
+//    //Q_ASSERT(totalVisited == numTriangles);
+//    //Q_ASSERT(numComponents == (int)linkedComponents->size());
+//
+//    delete[] heapIndex;
+//    delete[] triangleIndex;
+//
+//    linkedComponentsCalculated = true;
+//    return numComponents;
+//}
+
+//void Triangulation::copyMaximalComponent(Triangulation& t) const {
+//    t.clear();
+//    //Q_ASSERT(linkedComponentsCalculated && linkedComponents != 0);
+//    if (!linkedComponentsCalculated || linkedComponents->size() == 0)
+//        return;
+//
+//    // Find maximal component
+//    int indMax = 0;
+//    int numMax = (int)linkedComponents->at(0).size();
+//    for (int i = 1; i < (int)linkedComponents->size(); ++i) {
+//        if ((int)linkedComponents->at(i).size() > numMax) {
+//            indMax = i;
+//            numMax = (int)linkedComponents->at(i).size();
+//        }
+//    }
+//    //qDebug() << "Maximal linked component: " << numMax << " triangles.\n";
+//
+//    t.triangles.resize(numMax);
+//
+//    std::vector<int> vertexIndices(vertices.size());
+//    for (size_t i = 0; i < vertices.size(); ++i)
+//        vertexIndices[i] = (-1);
+//
+//    const LinkedComponent& maxComp = linkedComponents->at(indMax);
+//    LinkedComponent::const_iterator i = maxComp.begin();
+//    int numTriangles = 0, numVert = 0;
+//    while (i != maxComp.end()) {
+//        int triangleIdx = *i;
+//        const Triangle& triangle = triangles.at(triangleIdx);
+//        Triangle newTriangle;
+//        for (int j = 0; j < 3; ++j) {
+//            int v = triangle[j];
+//            if (vertexIndices[v] < 0) {
+//                t.vertices.push_back(vertices[v]);
+//                vertexIndices[v] = numVert;
+//                ++numVert;
+//            }
+//            newTriangle[j] = vertexIndices[v];
+//        }
+//        t.triangles.at(numTriangles) = newTriangle;
+//        ++numTriangles;
+//        ++i;
+//    }
+//    //qDebug() << "Maximal linked component is copied.\n";
+//}
+
+//bool Triangulation::contains(const R3Point& p) const {
+//    double s = 0.;
+//    for (int i = 0; i < (int)triangles.size(); ++i) {
+//        const Triangle& tr = triangles[i];
+//        double a = (R3Vector ()).signedSolidAngle(
+//            vertices[tr[0]].point - p,
+//            vertices[tr[1]].point - p,
+//            vertices[tr[2]].point - p
+//        );
+//        s += a;
+//    }
+//    s = fabs(s);        // Safety
+//    // s must be 4*pi for a point inside and 0 for a point outside.
+//    return (s > 3. * PI);
+//}
+
+void Triangulation::computeVertexRing(
+    int vertexIdx, VertexRing& vertexRing
+) const {
+    assert(trianglesOfVerticesCalculated);
+    assert(trianglesOfVertices.size() == vertices.size());
+
+    std::multimap<int, int> ringEdges;
+
+    const TrianglesOfVertex& vertexTriangles =
+        trianglesOfVertices.at(vertexIdx);
+    int initialVertex = (-1);
+    for (size_t t = 0; t < vertexTriangles.size(); ++t) {
+        int triangleIdx = vertexTriangles[t];
+        const Triangle& triangle = triangles.at(triangleIdx);
+        int k = 0;
+        int triangleVertices[2];
+        for (int j = 0; j < 3; ++j) {
+            int w = triangle[j];
+            if (w != vertexIdx) {
+                assert(k < 2);
+                triangleVertices[k] = w;
+                ++k;
+                if (initialVertex < 0)
+                    initialVertex = w;
+            }
+        }
+        assert(k == 2);
+        ringEdges.insert(std::make_pair(
+            triangleVertices[0], triangleVertices[1]
+        ));
+        ringEdges.insert(std::make_pair(
+            triangleVertices[1], triangleVertices[0]
+        ));
+    }
+
+    assert(initialVertex >= 0);
+    vertexRing.resize(vertexTriangles.size());
+    int idx = 0;
+    vertexRing[0] = initialVertex;
+    ++idx;
+    int currentVertex = initialVertex;
+    assert(ringEdges.count(currentVertex) == 2);
+    while (idx < int(vertexTriangles.size())) {
+        auto range = ringEdges.equal_range(currentVertex);
+        auto i = range.first;
+        int v0 = i->second;
+        if (idx <= 1 || v0 != vertexRing[idx - 2]) {
+            vertexRing[idx] = v0;
+            currentVertex = v0;
+            ++idx;
+        }
+        else {
+            ++i;
+            assert(i != range.second);
+            int v1 = i->second;
+            assert(v1 != vertexRing[idx - 2]);
+            vertexRing[idx] = v1;
+            currentVertex = v1;
+            ++idx;
+        }
+    }
+}
+
+//void Triangulation::checkBorderEdges(
+//    int& numManifoldEdges,
+//    int& numBorderEdges,
+//    int& numNonManifoldEdges // Edges that belong to more then 2 triangles
+//) const {
+//    numManifoldEdges = 0;
+//    numBorderEdges = 0;
+//    numNonManifoldEdges = 0;
+//
+//    std::map<Edge, int> edgeDegree;
+//    for (size_t i = 0; i < triangles.size(); ++i) {
+//        const Triangulation::Triangle& t = triangles.at(i);
+//        for (int i = 0; i < 3; ++i) {
+//            int v0 = t[i];
+//            int v1;
+//            if (i < 2)
+//                v1 = t[i + 1];
+//            else
+//                v1 = t[0];
+//            Edge te(v0, v1);
+//            if (edgeDegree.find(te) == edgeDegree.end()) {
+//                edgeDegree[te] = 1;
+//            }
+//            else {
+//                ++(edgeDegree[te]);
+//            }
+//        }
+//    }
+//
+//    std::map<Edge, int>::const_iterator i = edgeDegree.cbegin();
+//    while (i != edgeDegree.cend()) {
+//        assert(i->second > 0);
+//        if (i->second == 2) {
+//            ++numManifoldEdges;
+//        }
+//        else if (i->second == 1) {
+//            ++numBorderEdges;
+//        }
+//        else {
+//            ++numNonManifoldEdges;
+//        }
+//
+//        ++i;
+//    }
+//}
+
+//void Triangulation::annihilateSmallTriangles(
+//    int& numRemovedEdges,
+//    int& numRemovedCompleteTriangles,
+//    int& numRemovedTriangles,
+//    double eps /* = 0.01 */
+//) {
+//    std::vector<Vertex> newVertices;
+//    std::vector<Triangle> newTriangles;
+//
+//    std::map<int, int> replacedVertex;
+//    std::vector<Vertex> modifiedVertices;
+//    std::set<int> removedTriangles;
+//    std::set<Edge> removedEdges;
+//
+//    numRemovedEdges = 0;
+//    numRemovedCompleteTriangles = 0;
+//
+//    for (size_t i = 0; i < triangles.size(); ++i) {
+//        const Triangle& t = triangles.at(i);
+//
+//        int vertexIdx0 = t.indices[0];
+//        int vertexIdx1 = t.indices[1];
+//        int vertexIdx2 = t.indices[2];
+//
+//        Edge edge0(vertexIdx0, vertexIdx1);
+//        Edge edge1(vertexIdx1, vertexIdx2);
+//        Edge edge2(vertexIdx2, vertexIdx0);
+//
+//        Vertex v0 = vertices.at(vertexIdx0);
+//        Vertex v1 = vertices.at(vertexIdx1);
+//        Vertex v2 = vertices.at(vertexIdx2);
+//
+//        R3Point p0 = v0.point;
+//        R3Point p1 = v1.point;
+//        R3Point p2 = v2.point;
+//
+//        double len[3];
+//        len[0] = p0.distance(p1);
+//        len[1] = p1.distance(p2);
+//        len[2] = p2.distance(p0);
+//
+//        if (
+//            len[0] <= eps &&
+//            len[1] <= eps &&
+//            len[2] <= eps &&
+//            replacedVertex.count(vertexIdx0) == 0 &&
+//            replacedVertex.count(vertexIdx1) == 0 &&
+//            replacedVertex.count(vertexIdx2) == 0
+//
+//            && numRemovedCompleteTriangles < TEST_MAX_TRIANGLES //???
+//            )
+//        {
+//            // Replace complete triangle by its center
+//            R3Point center(
+//                (p0.x + p1.x + p2.x) / 3.,
+//                (p0.y + p1.y + p2.y) / 3.,
+//                (p0.z + p1.z + p2.z) / 3.
+//            );
+//            R3Vector normal = v0.normal + v1.normal + v2.normal;
+//            normal.normalize();
+//            modifiedVertices.push_back(
+//                Vertex(center, normal)
+//            );
+//            int replacedVertexIdx = int(modifiedVertices.size() - 1);
+//            replacedVertex[vertexIdx0] = replacedVertexIdx;
+//            replacedVertex[vertexIdx1] = replacedVertexIdx;
+//            replacedVertex[vertexIdx2] = replacedVertexIdx;
+//            ++numRemovedCompleteTriangles;
+//
+//            removedEdges.insert(edge0);
+//            removedEdges.insert(edge1);
+//            removedEdges.insert(edge2);
+//
+//            //... removedTriangles.insert(i); // Remove this triangle
+//            continue;
+//        }
+//
+//        int numSmallEdges = 0;
+//        int smallEdgeIdx = (-1);
+//        if (
+//            len[0] <= eps &&
+//            replacedVertex.count(vertexIdx0) == 0 &&
+//            replacedVertex.count(vertexIdx1) == 0
+//            ) {
+//            smallEdgeIdx = 0;
+//            ++numSmallEdges;
+//        }
+//        if (
+//            len[1] <= eps &&
+//            replacedVertex.count(vertexIdx1) == 0 &&
+//            replacedVertex.count(vertexIdx2) == 0 &&
+//            (
+//                smallEdgeIdx < 0 ||
+//                len[1] < len[smallEdgeIdx]
+//                )
+//            ) {
+//            smallEdgeIdx = 1;
+//            ++numSmallEdges;
+//        }
+//        if (
+//            len[2] <= eps &&
+//            replacedVertex.count(vertexIdx2) == 0 &&
+//            replacedVertex.count(vertexIdx0) == 0 &&
+//            (
+//                smallEdgeIdx < 0 ||
+//                len[2] < len[smallEdgeIdx]
+//                )
+//            ) {
+//            smallEdgeIdx = 2;
+//            ++numSmallEdges;
+//        }
+//        if (numSmallEdges == 0)
+//            continue;
+//
+//        if (numRemovedEdges >= TEST_MAX_EDGES)
+//            continue;           //?????
+//
+//        int vertIdx0 = t.indices[smallEdgeIdx];
+//        int vertIdx1 = t.indices[(smallEdgeIdx + 1) % 3];
+//        Edge smallEdge(vertIdx0, vertIdx1);
+//
+//        assert(removedEdges.count(smallEdge) == 0);
+//        assert(
+//            replacedVertex.count(vertIdx0) == 0 &&
+//            replacedVertex.count(vertIdx1) == 0
+//        );
+//
+//        // Replace 2 vertices by the center of edge
+//        R3Point center =
+//            vertices.at(vertIdx0).point +
+//            (vertices.at(vertIdx1).point - vertices.at(vertIdx0).point) * 0.5;
+//        R3Vector normal = vertices.at(vertIdx0).normal +
+//            vertices.at(vertIdx1).normal;
+//        normal.normalize();
+//        modifiedVertices.push_back(
+//            Vertex(center, normal)
+//        );
+//        int replacedVertexIdx = int(modifiedVertices.size() - 1);
+//        replacedVertex[vertIdx0] = replacedVertexIdx;
+//        replacedVertex[vertIdx1] = replacedVertexIdx;
+//
+//        removedEdges.insert(smallEdge);
+//        ++numRemovedEdges;
+//
+//        //... removedTriangles.insert(i); // Remove this triangle
+//    } // end for
+//
+//    numRemovedTriangles = 0;
+//    for (size_t i = 0; i < triangles.size(); ++i) {
+//        const Triangle& t = triangles.at(i);
+//
+//        int vertexIdx0 = t.indices[0];
+//        int vertexIdx1 = t.indices[1];
+//        int vertexIdx2 = t.indices[2];
+//
+//        Edge edge0(vertexIdx0, vertexIdx1);
+//        Edge edge1(vertexIdx1, vertexIdx2);
+//        Edge edge2(vertexIdx2, vertexIdx0);
+//
+//        if (
+//            removedEdges.count(edge0) != 0 ||
+//            removedEdges.count(edge1) != 0 ||
+//            removedEdges.count(edge2) != 0
+//            ) {
+//            removedTriangles.insert(i); // Remove this triangle
+//            ++numRemovedTriangles;
+//        }
+//    }
+//    assert(numRemovedTriangles == int(removedTriangles.size()));
+//
+//    std::vector<int> newVertexIdx(vertices.size());
+//    int numModifiedVertices = int(modifiedVertices.size());
+//    newVertices.resize(
+//        numModifiedVertices +
+//        (vertices.size() - replacedVertex.size())
+//    );
+//    // Copy modified vertices to the beginning of newVertices array
+//    for (size_t i = 0; i < modifiedVertices.size(); ++i) {
+//        newVertices.at(i) = modifiedVertices.at(i);
+//    }
+//    int currentVertexIdx = numModifiedVertices;
+//    for (size_t i = 0; i < vertices.size(); ++i) {
+//        if (replacedVertex.count(i) == 0) {
+//            // The i-th vertex is not replaced
+//            newVertices.at(currentVertexIdx) = vertices.at(i);
+//            newVertexIdx.at(i) = currentVertexIdx;
+//            ++currentVertexIdx;
+//        }
+//        else {
+//            // The i-th vertex was replaced
+//            newVertexIdx.at(i) = replacedVertex[i];
+//        }
+//    }
+//
+//    newTriangles.resize(
+//        triangles.size() - numRemovedTriangles
+//    );
+//    int currentTriangleIdx = 0;
+//    for (size_t i = 0; i < triangles.size(); ++i) {
+//        if (removedTriangles.count(i) != 0)
+//            continue;
+//        const Triangle& t = triangles.at(i);
+//        newTriangles.at(currentTriangleIdx) =
+//            Triangle(
+//                newVertexIdx.at(t[0]),
+//                newVertexIdx.at(t[1]),
+//                newVertexIdx.at(t[2])
+//            );
+//        ++currentTriangleIdx;
+//    }
+//
+//    // Check edges
+//    int numManifoldEdges = 0;
+//    int numBorderEdges = 0;
+//    int numNonManifoldEdges = 0;
+//
+//    //qDebug() << "New vertices: " << newVertices.size() << endl;
+//    //qDebug() << "New triangles: " << newTriangles.size() << endl;
+//
+//    std::map<Edge, int> edgeDegree;
+//    for (size_t i = 0; i < newTriangles.size(); ++i) {
+//        const Triangulation::Triangle& t = newTriangles.at(i);
+//        for (int i = 0; i < 3; ++i) {
+//            int v0 = t[i];
+//            int v1;
+//            if (i < 2)
+//                v1 = t[i + 1];
+//            else
+//                v1 = t[0];
+//            Edge te(v0, v1);
+//            if (edgeDegree.count(te) == 0) {
+//                edgeDegree[te] = 1;
+//            }
+//            else {
+//                ++(edgeDegree[te]);
+//            }
+//        }
+//    }
+//
+//    std::map<Edge, int>::const_iterator i = edgeDegree.cbegin();
+//    while (i != edgeDegree.cend()) {
+//        assert(i->second > 0);
+//        if (i->second == 2) {
+//            ++numManifoldEdges;
+//        }
+//        else if (i->second == 1) {
+//            ++numBorderEdges;
+//            //qDebug() << "Border edge: " << i->first.vertIdx[0]
+//            //    << " " << i->first.vertIdx[1] << endl;
+//        }
+//        else {
+//            ++numNonManifoldEdges;
+//            //qDebug() << "Non-manifold edge: " << i->first.vertIdx[0]
+//            //    << " " << i->first.vertIdx[1] << endl;
+//            //qDebug() << "Edge degree: " << i->second << endl;
+//        }
+//        ++i;
+//    }
+//
+//    vertices = newVertices;
+//    triangles = newTriangles;
+//}
+
+double Triangulation::simplify(
+    int& numRemovedEdges,
+    int& numRemovedTriangles,
+    double eps // = 0.01
+) {
+    defineTrianglesOfVertices();
+
+    std::vector<Vertex> newVertices;
+    std::vector<Triangle> newTriangles;
+
+    std::map<int, int> replacedVertex;
+    std::vector<Vertex> modifiedVertices;
+    std::set<int> removedTriangles;
+    std::set<Edge> removedEdges;
+    std::set<int> frozenVertices;
+
+    int numComplicatedEdges = 0;
+    numRemovedEdges = 0;
+
+    for (size_t i = 0; i < triangles.size(); ++i) {
+        const Triangle& t = triangles.at(i);
+
+        int vertexIdx0 = t.indices[0];
+        int vertexIdx1 = t.indices[1];
+        int vertexIdx2 = t.indices[2];
+
+        Edge edge0(vertexIdx0, vertexIdx1);
+        Edge edge1(vertexIdx1, vertexIdx2);
+        Edge edge2(vertexIdx2, vertexIdx0);
+
+        Vertex v0 = vertices.at(vertexIdx0);
+        Vertex v1 = vertices.at(vertexIdx1);
+        Vertex v2 = vertices.at(vertexIdx2);
+
+        R3Point p0 = v0.point;
+        R3Point p1 = v1.point;
+        R3Point p2 = v2.point;
+
+        double len[3];
+        len[0] = p0.distance(p1);
+        len[1] = p1.distance(p2);
+        len[2] = p2.distance(p0);
+
+        int numSmallEdges = 0;
+        int smallEdgeIdx = (-1);
+        if (
+            len[0] <= eps &&
+            replacedVertex.count(vertexIdx0) == 0 &&
+            replacedVertex.count(vertexIdx1) == 0 &&
+
+            frozenVertices.count(vertexIdx0) == 0 &&
+            frozenVertices.count(vertexIdx1) == 0
+            ) {
+            smallEdgeIdx = 0;
+            ++numSmallEdges;
+        }
+        if (
+            len[1] <= eps &&
+            replacedVertex.count(vertexIdx1) == 0 &&
+            replacedVertex.count(vertexIdx2) == 0 &&
+
+            frozenVertices.count(vertexIdx1) == 0 &&
+            frozenVertices.count(vertexIdx2) == 0 &&
+            (
+                smallEdgeIdx < 0 ||
+                len[1] < len[smallEdgeIdx]
+                )
+            ) {
+            smallEdgeIdx = 1;
+            ++numSmallEdges;
+        }
+        if (
+            len[2] <= eps &&
+            replacedVertex.count(vertexIdx2) == 0 &&
+            replacedVertex.count(vertexIdx0) == 0 &&
+
+            frozenVertices.count(vertexIdx2) == 0 &&
+            frozenVertices.count(vertexIdx0) == 0 &&
+            (
+                smallEdgeIdx < 0 ||
+                len[2] < len[smallEdgeIdx]
+                )
+            ) {
+            smallEdgeIdx = 2;
+            ++numSmallEdges;
+        }
+        if (numSmallEdges == 0)
+            continue;
+
+        //... if (numRemovedEdges >= TEST_MAX_EDGES)
+        //...     continue;           //?????
+
+        // Check whether we can remove this edge
+        // preserving a topology (manifold edges)
+        int vertIdx0 = t.indices[smallEdgeIdx];
+        int vertIdx1 = t.indices[(smallEdgeIdx + 1) % 3];
+        const VertexStar& star0 = starsOfVertices.at(vertIdx0);
+        const VertexStar& star1 = starsOfVertices.at(vertIdx1);
+
+        int numCommonVertices = 0;
+
+        VertexStar::const_iterator s1 = star1.cbegin();
+        while (s1 != star1.cend()) {
+            if (star0.count(*s1) != 0) {
+                ++numCommonVertices;
+
+                /*...
+                int commonVertex = *s1;
+                qDebug() << "    Common vertex: " << commonVertex;
+                // Print a star of a common vertex
+                qDebug() << "    Star of vertex " << commonVertex << ":";
+                VertexStar::const_iterator cvs =
+                    starsOfVertices.at(commonVertex).cbegin();
+                while (cvs != starsOfVertices.at(commonVertex).cend()) {
+                    qDebug() << "    " << *cvs;
+                    ++cvs;
+                }
+                qDebug() << "    ---- End of Star";
+                ...*/
+
+            }
+            ++s1;
+        }
+        if (numCommonVertices > 2) {
+
+            /*...
+            qDebug() << "Complicated edge: "
+                << vertIdx0 << vertIdx1;
+            qDebug() << "  Number of common vertices: " << numCommonVertices;
+
+            //------------------------------------------------
+            qDebug() << "  Star of vertex " << vertIdx0 << ":";
+            s1 = star0.cbegin();
+            while (s1 != star0.cend()) {
+                qDebug() << *s1 << " ";
+                ++s1;
+            }
+
+            qDebug() << "  Star of vertex " << vertIdx1 << ":";
+            s1 = star1.cbegin();
+            while (s1 != star1.cend()) {
+                qDebug() << *s1 << " ";
+                ++s1;
+            }
+            //------------------------------------------------
+            ...*/
+
+            ++numComplicatedEdges;
+            continue;   // Do not remove this edge
+        }
+
+        Edge smallEdge(vertIdx0, vertIdx1);
+
+        assert(removedEdges.count(smallEdge) == 0);
+        assert(
+            replacedVertex.count(vertIdx0) == 0 &&
+            replacedVertex.count(vertIdx1) == 0
+        );
+
+        // Replace 2 vertices by the center of edge
+        R3Point center =
+            vertices.at(vertIdx0).point +
+            (vertices.at(vertIdx1).point - vertices.at(vertIdx0).point) * 0.5;
+        R3Vector normal = vertices.at(vertIdx0).normal +
+            vertices.at(vertIdx1).normal;
+        normal.normalize();
+        modifiedVertices.push_back(
+            Vertex(center, normal)
+        );
+        int replacedVertexIdx = int(modifiedVertices.size() - 1);
+        replacedVertex[vertIdx0] = replacedVertexIdx;
+        replacedVertex[vertIdx1] = replacedVertexIdx;
+
+        removedEdges.insert(smallEdge);
+        ++numRemovedEdges;
+
+        VertexStar::const_iterator s0 = star0.cbegin();
+        while (s0 != star0.cend()) {
+            int v = *s0;
+            if (v != vertIdx0 && v != vertIdx1)
+                frozenVertices.insert(v);
+            ++s0;
+        }
+        s1 = star1.cbegin();
+        while (s1 != star1.cend()) {
+            int v = *s1;
+            if (v != vertIdx0 && v != vertIdx1)
+                frozenVertices.insert(v);
+            ++s1;
+        }
+
+        //... removedTriangles.insert(i); // Remove this triangle
+    } // end for
+
+    //qDebug() << "numComplicatedEdges: " << numComplicatedEdges / 2;
+    //qDebug() << "Removed simple edges: " << removedEdges.size();
+
+    numRemovedTriangles = 0;
+    for (size_t i = 0; i < triangles.size(); ++i) {
+        const Triangle& t = triangles.at(i);
+
+        int vertexIdx0 = t.indices[0];
+        int vertexIdx1 = t.indices[1];
+        int vertexIdx2 = t.indices[2];
+
+        Edge edge0(vertexIdx0, vertexIdx1);
+        Edge edge1(vertexIdx1, vertexIdx2);
+        Edge edge2(vertexIdx2, vertexIdx0);
+
+        if (
+            removedEdges.count(edge0) != 0 ||
+            removedEdges.count(edge1) != 0 ||
+            removedEdges.count(edge2) != 0
+            ) {
+            removedTriangles.insert(i); // Remove this triangle
+            ++numRemovedTriangles;
+        }
+    }
+    assert(numRemovedTriangles == int(removedTriangles.size()));
+
+    std::vector<int> newVertexIdx(vertices.size());
+    int numModifiedVertices = int(modifiedVertices.size());
+    newVertices.resize(
+        numModifiedVertices +
+        (vertices.size() - replacedVertex.size())
+    );
+    // Copy modified vertices to the beginning of newVertices array
+    for (size_t i = 0; i < modifiedVertices.size(); ++i) {
+        newVertices.at(i) = modifiedVertices.at(i);
+    }
+    int currentVertexIdx = numModifiedVertices;
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        if (replacedVertex.count(i) == 0) {
+            // The i-th vertex is not replaced
+            newVertices.at(currentVertexIdx) = vertices.at(i);
+            newVertexIdx.at(i) = currentVertexIdx;
+            ++currentVertexIdx;
+        }
+        else {
+            // The i-th vertex was replaced
+            newVertexIdx.at(i) = replacedVertex[i];
+        }
+    }
+
+    newTriangles.resize(
+        triangles.size() - numRemovedTriangles
+    );
+    int currentTriangleIdx = 0;
+    for (size_t i = 0; i < triangles.size(); ++i) {
+        if (removedTriangles.count(i) != 0)
+            continue;
+        const Triangle& t = triangles.at(i);
+        newTriangles.at(currentTriangleIdx) =
+            Triangle(
+                newVertexIdx.at(t[0]),
+                newVertexIdx.at(t[1]),
+                newVertexIdx.at(t[2])
+            );
+        ++currentTriangleIdx;
+    }
+
+    // Check edges
+    int numManifoldEdges = 0;
+    int numBorderEdges = 0;
+    int numNonManifoldEdges = 0;
+
+    /*qDebug() << "New vertices: " << newVertices.size();
+    qDebug() << "New triangles: " << newTriangles.size();*/
+
+    std::map<Edge, int> edgeDegree;
+    for (size_t i = 0; i < newTriangles.size(); ++i) {
+        const Triangulation::Triangle& t = newTriangles.at(i);
+        for (int i = 0; i < 3; ++i) {
+            int v0 = t[i];
+            int v1;
+            if (i < 2)
+                v1 = t[i + 1];
+            else
+                v1 = t[0];
+            Edge te(v0, v1);
+            if (edgeDegree.count(te) == 0) {
+                edgeDegree[te] = 1;
+            }
+            else {
+                ++(edgeDegree[te]);
+            }
+        }
+    }
+
+    std::map<Edge, int>::const_iterator i = edgeDegree.cbegin();
+    while (i != edgeDegree.cend()) {
+        assert(i->second > 0);
+        if (i->second == 2) {
+            ++numManifoldEdges;
+        }
+        else if (i->second == 1) {
+            ++numBorderEdges;
+            //qDebug() << "Border edge: " << i->first.vertIdx[0]
+                //<< " " << i->first.vertIdx[1];
+        }
+        else {
+            ++numNonManifoldEdges;
+            //qDebug() << "Non-manifold edge: " << i->first.vertIdx[0]
+            //    << " " << i->first.vertIdx[1];
+            //qDebug() << "Edge degree: " << i->second;
+        }
+        ++i;
+    }
+
+    vertices = newVertices;
+    triangles = newTriangles;
+
+    invalidateAdjacentTriangles();
+    invalidateTrianglesOfVertices();
+
+    double minLen = 1e+30;
+    for (size_t i = 0; i < triangles.size(); ++i) {
+        const Triangle& t = triangles.at(i);
+
+        int vertexIdx0 = t.indices[0];
+        int vertexIdx1 = t.indices[1];
+        int vertexIdx2 = t.indices[2];
+        Vertex v0 = vertices.at(vertexIdx0);
+        Vertex v1 = vertices.at(vertexIdx1);
+        Vertex v2 = vertices.at(vertexIdx2);
+
+        R3Point p0 = v0.point;
+        R3Point p1 = v1.point;
+        R3Point p2 = v2.point;
+
+        double len = p0.distance(p1);
+        if (len < minLen)
+            minLen = len;
+        len = p1.distance(p2);
+        if (len < minLen)
+            minLen = len;
+        len = p2.distance(p0);
+        if (len < minLen)
+            minLen = len;
+    }
+    return minLen;
+}
+
+void Triangulation::cotangentLaplaceSmoothing(
+    double lambda /* = 0.330 */  // May be negative for inflation/Taubin smooth
+) {
+    //... assert(adjacentTrianglesCalculated);
+    if (!adjacentTrianglesCalculated)
+        defineAdjacentTriangles();
+    // Also starsOfVertices are calculated
+    //... assert(starsOfVertices.size() == vertices.size());
+    if (starsOfVertices.size() != vertices.size())
+        defineTrianglesOfVertices();
+    assert(ringsOfVertices.size() == vertices.size());
+
+    std::vector<R3Point> newVertices(vertices.size());
+    for (int i = 0; i < int(vertices.size()); ++i) {
+        R3Vector laplaceShift = cotangentLaplace(i);
+        newVertices[i] = vertices[i].point + laplaceShift * lambda;
+    }
+
+    // Copy shifted vertices back
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        vertices[i].point = newVertices[i];
+    }
+}
+
+void Triangulation::uniformLaplaceSmoothing(
+    double lambda /* = 0.330 */  // May be negative for inflation/Taubin smooth
+) {
+    //... assert(adjacentTrianglesCalculated);
+    if (!adjacentTrianglesCalculated)
+        defineAdjacentTriangles();
+    // Also starsOfVertices are calculated
+    //... assert(starsOfVertices.size() == vertices.size());
+    if (starsOfVertices.size() != vertices.size())
+        defineTrianglesOfVertices();
+    assert(ringsOfVertices.size() == vertices.size());
+
+    std::vector<R3Point> newVertices(vertices.size());
+    for (int i = 0; i < int(vertices.size()); ++i) {
+        R3Vector laplaceShift = uniformLaplace(i);
+        newVertices[i] = vertices[i].point + laplaceShift * lambda;
+    }
+
+    // Copy shifted vertices back
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        vertices[i].point = newVertices[i];
+    }
+}
+
+
+void Triangulation::taubinSmoothing(
+    int iterations /* = 1 */,
+    double lambda /* = 0.330 */,
+    double mu /* = 0.331 */,
+    bool useCotangentLaplace /* = false */
+) {
+    defineTrianglesOfVertices();
+    assert(starsOfVertices.size() == vertices.size());
+
+    if (useCotangentLaplace) {
+        for (int i = 0; i < iterations; ++i) {
+            cotangentLaplaceSmoothing(
+                lambda
+            );
+            cotangentLaplaceSmoothing(
+                -mu
+            );
+        }
+    }
+    else {
+        for (int i = 0; i < iterations; ++i) {
+            uniformLaplaceSmoothing(
+                lambda
+            );
+            uniformLaplaceSmoothing(
+                -mu
+            );
+        }
+    }
+}
+
+R3Vector Triangulation::cotangentLaplace(int vertexIdx) const {
+    if (!adjacentTrianglesCalculated)
+        defineAdjacentTriangles();
+    if (!trianglesOfVerticesCalculated)
+        defineTrianglesOfVertices();
+    assert(ringsOfVertices.size() == vertices.size());
+
+    const VertexRing& vertexRing = ringsOfVertices.at(vertexIdx);
+    if (vertexRing.size() == 0)
+        return R3Vector(0., 0., 0.);
+
+    int n = int(vertexRing.size());
+    R3Point t = vertices.at(vertexIdx).point;
+    if (n == 1) {
+        int idx = vertexRing.at(0);
+        R3Point p = vertices.at(idx).point;
+        return p - t;
+    }
+    double weightsSum = 0.;
+    R3Point centroid(0., 0., 0.); // Weighted centroid
+
+    // Loop for each edge of umbrella
+    for (int i = 0; i < n; ++i) {
+        int i0 = i - 1;
+        if (i0 < 0)
+            i0 = n - 1;
+        int i1 = i + 1;
+        if (i1 >= n)
+            i1 = 0;
+        int idx = vertexRing[i];
+        int idx0 = vertexRing[i0];
+        int idx1 = vertexRing[i1];
+
+        R3Point p = vertices.at(idx).point;
+        R3Point p0 = vertices.at(idx0).point;
+        R3Point p1 = vertices.at(idx1).point;
+        double cotanAlpha = R3Vector::cotan(
+            p - p0, t - p0
+        );
+        double cotanBeta = R3Vector::cotan(
+            p - p1, t - p1
+        );
+        double w = (cotanAlpha + cotanBeta) / 2.;
+        weightsSum += w;
+        centroid += p * w;
+    }
+    centroid *= (1. / weightsSum);
+    return centroid - t;
+}
+
+R3Vector Triangulation::uniformLaplace(int vertexIdx) const {
+    if (!adjacentTrianglesCalculated)
+        defineAdjacentTriangles();
+    if (!trianglesOfVerticesCalculated)
+        defineTrianglesOfVertices();
+    assert(ringsOfVertices.size() == vertices.size());
+
+    const VertexRing& vertexRing = ringsOfVertices.at(vertexIdx);
+    if (vertexRing.size() == 0)
+        return R3Vector(0., 0., 0.);
+
+    int n = int(vertexRing.size());
+    R3Point t = vertices.at(vertexIdx).point;
+    if (n == 1) {
+        int idx = vertexRing.at(0);
+        R3Point p = vertices.at(idx).point;
+        return p - t;
+    }
+    if (n == 2) {
+        int idx = vertexRing.at(0);
+        R3Point p = vertices.at(idx).point;
+        idx = vertexRing.at(1);
+        p += vertices.at(idx).point;
+        p *= 0.5;
+        return p - t;
+    }
+
+    R3Point centroid(0., 0., 0.); // Centroid of wireframe
+    double weight = 0.;
+
+    int idx0 = vertexRing[0];
+    R3Point p0 = vertices.at(idx0).point;
+    for (int i = 1; i <= n; ++i) {
+        int j = i;
+        if (j >= n)
+            j = 0;
+        int idx1 = vertexRing[j];
+        R3Point p1 = vertices.at(idx1).point;
+        double w = p0.distance(p1);
+        centroid += (p0 + p1) * (w / 2.);
+        weight += w;
+        p0 = p1;
+    }
+    if (weight > R3_EPSILON)
+        centroid *= (1. / weight);
+    return centroid - t;
 }
 

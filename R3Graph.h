@@ -136,6 +136,28 @@ public:
             x*v.y - y*v.x
         );
     }
+    double dotProduct(const R3Vector& v) const {
+        return scalarProduct(v);
+    }
+    R3Vector crossProduct(const R3Vector& v) const {
+        return vectorProduct(v);
+    }
+    double norm() const { return length(); }
+
+    static double cotan(
+        const R3Vector& u, const R3Vector& v
+    ) {
+        double d = u.dotProduct(v);
+        R3Vector c = u.crossProduct(v);
+        double c_norm = c.norm();
+        if (c_norm > R3_EPSILON) {
+            return d / c_norm;
+        }
+        else {
+            // must be infinity, return a big number
+            return d / R3_EPSILON;
+        }
+    }
 
     static double signedVolume(
         const R3Vector& v0, const R3Vector& v1, const R3Vector& v2
@@ -201,6 +223,10 @@ public:
     ) {
         return v0.area(v1);
     }
+    double signedSolidAngle(
+        const R3Vector& a,
+        const R3Vector& b,
+        const R3Vector& c);
 };
 
 inline R3Vector operator*(double c, const R3Vector& v) {
@@ -260,6 +286,10 @@ public:
         return R3Point(x + v.x, y + v.y, z + v.z);
     }
 
+    R3Point operator+(const R3Point& p) const {
+        return R3Point(x + p.x, y + p.y, z + p.z);
+    }
+
     //... R3Point operator+(const R3Point& v) const {
     //...     return R3Point(x + v.x, y + v.y, z + v.z);
     //... }
@@ -315,6 +345,9 @@ public:
         return R3Point(x*c, y*c, z*c);
     }
 
+    R3Point operator*=(double c) const {
+        return R3Point(x * c, y * c, z * c);
+    }
     //... R3Point& operator*=(double c) {
     //...     x *= c;
     //...     y *= c;

@@ -42,4 +42,19 @@ bool intersectPlaneAndLine(
     return true;
 }
 
+double R3Vector::signedSolidAngle(
+    const R3Vector& a,
+    const R3Vector& b,
+    const R3Vector& c
+) {
+    // Oosterom and Strackee formula
+    double v = R3Vector::signedVolume(a, b, c);
+    double lena = a.length();
+    double lenb = b.length();
+    double lenc = c.length();
+    double d = lena * lenb * lenc +
+        (a * b) * lenc + (a * c) * lenb + (b * c) * lena;
+    return 2. * atan(v / d);
+}
+
 } // end of namespace R3Graph

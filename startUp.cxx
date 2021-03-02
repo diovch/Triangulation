@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
 	
 	Triangulation triangulation;
 	
-	if (1)
+	if (0)
 		computeTriangulationOfVoxelSet_MY(
 			pointer,
 			threshold,
