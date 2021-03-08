@@ -4,6 +4,7 @@
 #include "voxelset.h"
 #include "Triangulation.h"
 #include "R3Graph.h"
+#include "Taubin.h"
 #include <iostream>
 #include <fstream>
 
@@ -91,6 +92,14 @@ int main(int argc, char* argv[])
 			{ 0,0,0 },
 			x_sc, y_sc, z_sc
 		);
+
+	if (0)
+		triangulation.taubinSmoothing(1, 0.3, 0.301, false);
+	else
+	{
+		Taubin(triangulation, 0.33, -0.331, 20);
+	}
+		
 
 	std::ofstream out;
 	std::string FileName = "C:\\Users\\owchi\\source\\repos\\TEST\\bin\\IsoSurface.stl";

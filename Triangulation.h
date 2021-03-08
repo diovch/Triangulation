@@ -5,6 +5,7 @@
 #include <vector>
 #include <set>
 #include <cstdio>
+#include <cassert>
 // #include "R2Graph.h"
 #include "r2geom.h"
 #include "R3Graph.h"

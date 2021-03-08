@@ -19,7 +19,8 @@ add_library(IsoLib STATIC
 			matrix.h
 			r2geom.h r2geom.cpp
 			skala.h skala.cpp
-			BinHeap.h BinHeap.cpp)
+			BinHeap.h BinHeap.cpp
+			Taubin.h Taubin.cpp)
 
 add_executable(IsoTest startUp.cxx)
 

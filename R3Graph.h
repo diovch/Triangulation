@@ -49,7 +49,7 @@ public:
         return R3Vector(x + v.x, y + v.y, z + v.z);
     }
 
-    //R3Vector operator+(const R3Point& v) const {
+    //R3Vector operator+=(const R3Point& v) const {
     //    return R3Vector(x + v.x, y + v.y, z + v.z);
     //}
 
@@ -59,6 +59,12 @@ public:
         z += v.z;
         return *this;
     }
+    //R3Vector& operator+=(const R3Point& v) {
+    //    x += v.x;
+    //    y += v.y;
+    //    z += v.z;
+    //    return *this;
+    //}
 
     R3Vector operator-(const R3Vector& v) const {
         return R3Vector(x - v.x, y - v.y, z - v.z);

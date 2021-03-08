@@ -229,12 +229,12 @@ void computeTriangulationOfVoxelSet(
     //                                           si = +-1
     std::map<Voxel, int> vertexIndices;
 
-    //for (int slice = sliceStart; slice <= sliceFinish; ++slice) {
-    //    for (int iy = iymin; iy <= iymax; ++iy) {
-    //        for (int ix = ixmin; ix <= ixmax; ++ix) {
-    for (int slice = sliceFinish / 2; slice <= sliceFinish * 3 / 4; ++slice) {
-        for (int iy = iymax / 2; iy <= iymax * 3 / 4; ++iy) {
-            for (int ix = ixmax / 2; ix <= ixmax * 3 / 4; ++ix) {
+    for (int slice = sliceStart; slice <= sliceFinish; ++slice) {
+        for (int iy = iymin; iy <= iymax; ++iy) {
+            for (int ix = ixmin; ix <= ixmax; ++ix) {
+    //for (int slice = sliceFinish / 2; slice <= sliceFinish * 3 / 4; ++slice) {
+    //    for (int iy = iymax / 2; iy <= iymax * 3 / 4; ++iy) {
+    //        for (int ix = ixmax / 2; ix <= ixmax * 3 / 4; ++ix) {
                 if (voxelSet.voxelAt(slice, ix, iy) == 0)
                     continue;
 
@@ -859,8 +859,7 @@ void computeTriangulationOfVoxelSet(
         } // end for (iy...
     } // end for (slice...
 
-    if(1)
-        triangulation.taubinSmoothing(1, 0.3, 0.3, false);
+
 }
 
 void computeTriangulationOfVoxelSet_MY(
