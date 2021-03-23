@@ -51,6 +51,13 @@ public:
             if (i >= 3)
                 i = 0;
             indices[2] = ind[i];
+
+            if (indices[1] > indices[2])
+            {
+                int tmp = indices[1];
+                indices[1] = indices[2];
+                indices[2] = tmp;
+            }
         }
 
         Triangle& operator=(const Triangle& t) {
@@ -66,6 +73,12 @@ public:
 
         int operator[](int i) const {
             return indices[i];
+        }
+
+        void invert() {
+            int tmp = indices[1];
+            indices[1] = indices[2];
+            indices[2] = tmp;
         }
 
         bool isAdjacent(const Triangle& t) const {
@@ -96,6 +109,14 @@ public:
                 } // end for (j...
             } // end for (i...
             return false;
+        }
+
+        bool operator==(const Triangle& t) const {
+            return (
+                indices[0] == t.indices[0] &&
+                indices[1] == t.indices[1] &&
+                indices[2] == t.indices[2]
+                );
         }
 
         bool operator!=(const Triangle& t) const {
@@ -134,14 +155,6 @@ public:
 
         bool operator>=(const Triangle& t) const {
             return !operator<(t);
-        }
-
-        bool operator==(const Triangle& t) const {
-            return (
-                indices[0] == t.indices[0] &&
-                indices[1] == t.indices[1] &&
-                indices[2] == t.indices[2]
-                );
         }
 
         void OutwardDirected(const R3Graph::R3Vector& out,
@@ -282,8 +295,20 @@ public:
     typedef std::vector<int> TrianglesOfVertex;
     typedef std::vector<int> TrianglesOfEdge;
     typedef std::set<int> VertexStar; // Vertices incident to this vertex
-    typedef std::vector<int> VertexRing; // Vertices incident to this vertex
-                                         // in the ring order
+    // typedef std::vector<int> VertexRing; // Vertices incident to this vertex
+    //                                     // in the ring order
+    // For border edges, a vertex ring may be non-closed
+    class VertexRing : public std::vector<int> {
+    public:
+        bool borderVertex;
+    public:
+        bool isBorderVertex() const { return borderVertex; }
+        VertexRing(size_t n = 0) :
+            std::vector<int>(n),
+            borderVertex(false)
+        {}
+    };
+
     mutable bool adjacentTrianglesCalculated;
     mutable std::vector<AdjacentTriangles>* adjacentTriangles;
     mutable bool trianglesOfVerticesCalculated;
@@ -441,6 +466,8 @@ public:
 
     R3Graph::R3Vector cotangentLaplace(int vertexIdx) const;
     R3Graph::R3Vector uniformLaplace(int vertexIdx) const;
+
+    
 };
 
 #endif

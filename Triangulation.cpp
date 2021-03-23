@@ -5,6 +5,7 @@
 #include <clocale>
 #include <cassert>
 #include <set>
+#include <deque>
 #include "Triangulation.h"
 #include "BinHeap.h"
 
@@ -74,28 +75,41 @@ void Triangulation::computeFramingBox() {
     box.size = maxPoint - minPoint;
 }
 
+
 void Triangulation::clear() {
     vertices.clear();
     triangles.clear();
+    adjacentTrianglesCalculated = false;
+    delete adjacentTriangles; adjacentTriangles = 0;
+    trianglesOfVerticesCalculated = false;
+    trianglesOfVertices.clear();
+    linkedComponentsCalculated = false;
+    delete linkedComponents; linkedComponents = 0;
 }
 
 void Triangulation::orientate() {
     for (size_t i = 0; i < triangles.size(); ++i) {
-        Triangle t = triangles.at(i);
+        Triangle& t = triangles.at(i);
+
+        /*???
         Vertex v0 = vertices.at(t.indices[0]);
         Vertex v1 = vertices.at(t.indices[1]);
         Vertex v2 = vertices.at(t.indices[2]);
         R3Point p0 = v0.point;
         R3Point p1 = v1.point;
         R3Point p2 = v2.point;
-        //R3Vector meanN = (v0.normal + v1.normal + v2.normal)*(1./3.);
-        t.Normal = (p1 - p0).vectorProduct(p2 - p0);
-        t.Normal.normalize();
-        //R3Vector Outward = p0 - imageCenter;
-        //if (Outward.scalarProduct(t.Normal) < 0.){}
-        //    t.RightHand();
+        R3Vector meanN = (v0.normal + v1.normal + v2.normal)*(1./3.);
+        R3Vector N = (p1 - p0).vectorProduct(p2 - p0);
+        if (N.scalarProduct(meanN) < 0.) {
+            t.invert();
+        }
+        ???*/
+
+        t.invert();     //??? Nessary because of the error in Skala code:
+                        //??? must be opposite orientation of triangles
     }
 }
+
 
 static const char * const xmlFirstLine =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
@@ -578,62 +592,6 @@ bool Triangulation::load(const char *path) {
 }
 
 
-void Triangulation::TriangulationOfTetrahedron(R3Graph::Tetrahedron& tetrahedron)
-{
-    std::vector<int> TriangleIndices;
-    TriangleIndices.clear();
-    std::set<int> EdgesWithPoints;
-
-    for (int i = 0; i < 6; ++i) 
-    {
-        double thrfun1 = tetrahedron.edges[i].A.second;
-        double thrfun2 = tetrahedron.edges[i].B.second;
-        if (thrfun1 * thrfun2 < 0.) 
-        {
-            if (tetrahedron.edges[i].index == 0) 
-            {
-
-                R3Point v = tetrahedron.edges[i].PointOnEdge();
-                vertices.push_back(v);
-
-                tetrahedron.edges[i].index = (int)vertices.size() - 1;
-                TriangleIndices.push_back(tetrahedron.edges[i].index);
-            }
-            else 
-            {
-                // vertex has already computed
-                TriangleIndices.push_back(tetrahedron.edges[i].index);
-            }
-            EdgesWithPoints.insert(i);
-        }
-    }
-    // Add triangles
-    if (TriangleIndices.size() == 3) 
-    {
-        Triangle t1(TriangleIndices[0],
-            TriangleIndices[1],
-            TriangleIndices[2]);
-        t1.OutwardDirected(tetrahedron.Outward, vertices[TriangleIndices[0]].point,
-            vertices[TriangleIndices[1]].point, vertices[TriangleIndices[2]].point);
-        triangles.push_back(t1);
-    }
-    else if (TriangleIndices.size() == 4)
-    {
-        Triangle t1(TriangleIndices[0],
-            TriangleIndices[1],
-            TriangleIndices[2]);
-        t1.OutwardDirected(tetrahedron.Outward, vertices[TriangleIndices[0]].point,
-            vertices[TriangleIndices[1]].point, vertices[TriangleIndices[2]].point);
-        triangles.push_back(t1);
-        
-        Triangle t2(TriangleIndices[1],
-            TriangleIndices[2],
-            TriangleIndices[3]);
-        t2.OutwardDirected(tetrahedron.Outward, vertices[TriangleIndices[1]].point,
-            vertices[TriangleIndices[2]].point, vertices[TriangleIndices[3]].point);
-        triangles.push_back(t2);
-    }
-}
 //--------------------------------------------------------------------------------------------------------------
 R3Point Triangulation::center() const {
     return (box.origin + box.size * 0.5);
@@ -663,8 +621,7 @@ void Triangulation::computeNormals() {
         }
         v.normal = sum;
     }
-}
-//
+}//
 //void Triangulation::refine() {  // Remove double vertices
 //    Triangulation t;
 //    std::map<R3Point, int> pointIdx;
@@ -987,32 +944,65 @@ void Triangulation::computeVertexRing(
     }
 
     assert(initialVertex >= 0);
-    vertexRing.resize(vertexTriangles.size());
-    int idx = 0;
-    vertexRing[0] = initialVertex;
-    ++idx;
-    int currentVertex = initialVertex;
-    assert(ringEdges.count(currentVertex) == 2);
-    while (idx < int(vertexTriangles.size())) {
-        auto range = ringEdges.equal_range(currentVertex);
+    std::deque<int> ring;
+    ring.push_back(initialVertex);
+    size_t ringSize = 1;
+    while (true) {
+        // Growing at the end of ring
+        auto range = ringEdges.equal_range(ring.back());
         auto i = range.first;
-        int v0 = i->second;
-        if (idx <= 1 || v0 != vertexRing[idx - 2]) {
-            vertexRing[idx] = v0;
-            currentVertex = v0;
-            ++idx;
-        }
-        else {
+        while (i != range.second) {
+            int vNext = i->second;
+            if (
+                ring.size() <= 1 ||
+                (
+                    vNext != ring[ring.size() - 2] &&
+                    vNext != ring.front()
+                    )
+                ) {
+                ring.push_back(vNext);
+                break;
+            }
             ++i;
-            assert(i != range.second);
-            int v1 = i->second;
-            assert(v1 != vertexRing[idx - 2]);
-            vertexRing[idx] = v1;
-            currentVertex = v1;
-            ++idx;
         }
+
+        // Growing at the beginning of ring
+        range = ringEdges.equal_range(ring.front());
+        i = range.first;
+        while (i != range.second) {
+            int vPrev = i->second;
+            if (
+                ring.size() <= 1 ||
+                (
+                    vPrev != ring[1] &&
+                    vPrev != ring.back()
+                    )
+                ) {
+                ring.push_front(vPrev);
+                break;
+            }
+            ++i;
+        }
+
+        if (ring.size() == ringSize)    // No change =>
+            break;                      //     end of ring construction
+        ringSize = ring.size(); // Continue the ring construstion
     }
+
+    vertexRing.resize(ring.size());
+    for (size_t i = 0; i < ring.size(); ++i) {
+        vertexRing[i] = ring[i];
+    }
+
+    //assert(
+    //    vertexRing.size() >= vertexTriangles.size()
+    //);
+
+    vertexRing.borderVertex = (
+        vertexRing.size() > vertexTriangles.size()
+        );
 }
+
 
 //void Triangulation::checkBorderEdges(
 //    int& numManifoldEdges,
@@ -1375,7 +1365,7 @@ double Triangulation::simplify(
 
             frozenVertices.count(vertexIdx0) == 0 &&
             frozenVertices.count(vertexIdx1) == 0
-            ) {
+        ) {
             smallEdgeIdx = 0;
             ++numSmallEdges;
         }
@@ -1389,8 +1379,8 @@ double Triangulation::simplify(
             (
                 smallEdgeIdx < 0 ||
                 len[1] < len[smallEdgeIdx]
-                )
-            ) {
+            )
+        ) {
             smallEdgeIdx = 1;
             ++numSmallEdges;
         }
@@ -1404,8 +1394,8 @@ double Triangulation::simplify(
             (
                 smallEdgeIdx < 0 ||
                 len[2] < len[smallEdgeIdx]
-                )
-            ) {
+            )
+        ) {
             smallEdgeIdx = 2;
             ++numSmallEdges;
         }
@@ -1418,7 +1408,7 @@ double Triangulation::simplify(
         // Check whether we can remove this edge
         // preserving a topology (manifold edges)
         int vertIdx0 = t.indices[smallEdgeIdx];
-        int vertIdx1 = t.indices[(smallEdgeIdx + 1) % 3];
+        int vertIdx1 = t.indices[(smallEdgeIdx + 1)%3];
         const VertexStar& star0 = starsOfVertices.at(vertIdx0);
         const VertexStar& star1 = starsOfVertices.at(vertIdx1);
 
@@ -1485,7 +1475,7 @@ double Triangulation::simplify(
         // Replace 2 vertices by the center of edge
         R3Point center =
             vertices.at(vertIdx0).point +
-            (vertices.at(vertIdx1).point - vertices.at(vertIdx0).point) * 0.5;
+            (vertices.at(vertIdx1).point - vertices.at(vertIdx0).point)*0.5;
         R3Vector normal = vertices.at(vertIdx0).normal +
             vertices.at(vertIdx1).normal;
         normal.normalize();
@@ -1517,7 +1507,7 @@ double Triangulation::simplify(
         //... removedTriangles.insert(i); // Remove this triangle
     } // end for
 
-    //qDebug() << "numComplicatedEdges: " << numComplicatedEdges / 2;
+    //qDebug() << "numComplicatedEdges: " << numComplicatedEdges/2;
     //qDebug() << "Removed simple edges: " << removedEdges.size();
 
     numRemovedTriangles = 0;
@@ -1536,7 +1526,7 @@ double Triangulation::simplify(
             removedEdges.count(edge0) != 0 ||
             removedEdges.count(edge1) != 0 ||
             removedEdges.count(edge2) != 0
-            ) {
+        ) {
             removedTriangles.insert(i); // Remove this triangle
             ++numRemovedTriangles;
         }
@@ -1560,8 +1550,7 @@ double Triangulation::simplify(
             newVertices.at(currentVertexIdx) = vertices.at(i);
             newVertexIdx.at(i) = currentVertexIdx;
             ++currentVertexIdx;
-        }
-        else {
+        } else {
             // The i-th vertex was replaced
             newVertexIdx.at(i) = replacedVertex[i];
         }
@@ -1589,8 +1578,8 @@ double Triangulation::simplify(
     int numBorderEdges = 0;
     int numNonManifoldEdges = 0;
 
-    /*qDebug() << "New vertices: " << newVertices.size();
-    qDebug() << "New triangles: " << newTriangles.size();*/
+    //qDebug() << "New vertices: " << newVertices.size();
+    //qDebug() << "New triangles: " << newTriangles.size();
 
     std::map<Edge, int> edgeDegree;
     for (size_t i = 0; i < newTriangles.size(); ++i) {
@@ -1605,8 +1594,7 @@ double Triangulation::simplify(
             Edge te(v0, v1);
             if (edgeDegree.count(te) == 0) {
                 edgeDegree[te] = 1;
-            }
-            else {
+            } else {
                 ++(edgeDegree[te]);
             }
         }
@@ -1617,13 +1605,11 @@ double Triangulation::simplify(
         assert(i->second > 0);
         if (i->second == 2) {
             ++numManifoldEdges;
-        }
-        else if (i->second == 1) {
+        } else if (i->second == 1) {
             ++numBorderEdges;
             //qDebug() << "Border edge: " << i->first.vertIdx[0]
-                //<< " " << i->first.vertIdx[1];
-        }
-        else {
+            //    << " " << i->first.vertIdx[1];
+        } else {
             ++numNonManifoldEdges;
             //qDebug() << "Non-manifold edge: " << i->first.vertIdx[0]
             //    << " " << i->first.vertIdx[1];
@@ -1680,8 +1666,13 @@ void Triangulation::cotangentLaplaceSmoothing(
 
     std::vector<R3Point> newVertices(vertices.size());
     for (int i = 0; i < int(vertices.size()); ++i) {
-        R3Vector laplaceShift = cotangentLaplace(i);
-        newVertices[i] = vertices[i].point + laplaceShift * lambda;
+        if (!ringsOfVertices.at(i).isBorderVertex()) {
+            R3Vector laplaceShift = cotangentLaplace(i);
+            newVertices[i] = vertices[i].point + laplaceShift * lambda;
+        }
+        else {
+            newVertices[i] = vertices[i].point;
+        }
     }
 
     // Copy shifted vertices back
@@ -1704,8 +1695,13 @@ void Triangulation::uniformLaplaceSmoothing(
 
     std::vector<R3Point> newVertices(vertices.size());
     for (int i = 0; i < int(vertices.size()); ++i) {
-        R3Vector laplaceShift = uniformLaplace(i);
-        newVertices[i] = vertices[i].point + laplaceShift * lambda;
+        if (!ringsOfVertices.at(i).isBorderVertex()) {
+            R3Vector laplaceShift = uniformLaplace(i);
+            newVertices[i] = vertices[i].point + laplaceShift * lambda;
+        }
+        else {
+            newVertices[i] = vertices[i].point;
+        }
     }
 
     // Copy shifted vertices back
@@ -1754,7 +1750,7 @@ R3Vector Triangulation::cotangentLaplace(int vertexIdx) const {
     assert(ringsOfVertices.size() == vertices.size());
 
     const VertexRing& vertexRing = ringsOfVertices.at(vertexIdx);
-    if (vertexRing.size() == 0)
+    if (vertexRing.isBorderVertex() || vertexRing.size() == 0)
         return R3Vector(0., 0., 0.);
 
     int n = int(vertexRing.size());
@@ -1804,7 +1800,7 @@ R3Vector Triangulation::uniformLaplace(int vertexIdx) const {
     assert(ringsOfVertices.size() == vertices.size());
 
     const VertexRing& vertexRing = ringsOfVertices.at(vertexIdx);
-    if (vertexRing.size() == 0)
+    if (vertexRing.isBorderVertex() || vertexRing.size() == 0)
         return R3Vector(0., 0., 0.);
 
     int n = int(vertexRing.size());
@@ -1844,3 +1840,59 @@ R3Vector Triangulation::uniformLaplace(int vertexIdx) const {
     return centroid - t;
 }
 
+void Triangulation::TriangulationOfTetrahedron(R3Graph::Tetrahedron& tetrahedron)
+{
+    std::vector<int> TriangleIndices;
+    TriangleIndices.clear();
+    std::set<int> EdgesWithPoints;
+
+    for (int i = 0; i < 6; ++i)
+    {
+        double thrfun1 = tetrahedron.edges[i].A.second;
+        double thrfun2 = tetrahedron.edges[i].B.second;
+        if (thrfun1 * thrfun2 < 0.)
+        {
+            if (tetrahedron.edges[i].index == 0)
+            {
+
+                R3Point v = tetrahedron.edges[i].PointOnEdge();
+                vertices.push_back(v);
+
+                tetrahedron.edges[i].index = (int)vertices.size() - 1;
+                TriangleIndices.push_back(tetrahedron.edges[i].index);
+            }
+            else
+            {
+                // vertex has already computed
+                TriangleIndices.push_back(tetrahedron.edges[i].index);
+            }
+            EdgesWithPoints.insert(i);
+        }
+    }
+    // Add triangles
+    if (TriangleIndices.size() == 3)
+    {
+        Triangle t1(TriangleIndices[0],
+            TriangleIndices[1],
+            TriangleIndices[2]);
+        t1.OutwardDirected(tetrahedron.Outward, vertices[TriangleIndices[0]].point,
+            vertices[TriangleIndices[1]].point, vertices[TriangleIndices[2]].point);
+        triangles.push_back(t1);
+    }
+    else if (TriangleIndices.size() == 4)
+    {
+        Triangle t1(TriangleIndices[0],
+            TriangleIndices[1],
+            TriangleIndices[2]);
+        t1.OutwardDirected(tetrahedron.Outward, vertices[TriangleIndices[0]].point,
+            vertices[TriangleIndices[1]].point, vertices[TriangleIndices[2]].point);
+        triangles.push_back(t1);
+
+        Triangle t2(TriangleIndices[1],
+            TriangleIndices[2],
+            TriangleIndices[3]);
+        t2.OutwardDirected(tetrahedron.Outward, vertices[TriangleIndices[1]].point,
+            vertices[TriangleIndices[2]].point, vertices[TriangleIndices[3]].point);
+        triangles.push_back(t2);
+    }
+}

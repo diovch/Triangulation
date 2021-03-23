@@ -1,12 +1,15 @@
 #include "itkImage.h"
 #include "itkImageFileReader.h"
+#include "itkRecursiveGaussianImageFilter.h"
 //#include "itkSTLMeshIO.h"
 #include "voxelset.h"
 #include "Triangulation.h"
 #include "R3Graph.h"
 #include "Taubin.h"
+#include "Segmentation.h"
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 
 double VoxelDensity(const Voxel&, short*);
 Voxel SearchSeed(short*, int, VoxelBox&);
@@ -17,13 +20,14 @@ int main(int argc, char* argv[])
 	if (0) // 6 necessary arguments
 	{
 		std::cerr << "Usage: " << std::endl;
-		std::cerr << argv[0] << " -i head_cta.nii -m head_cta_segm.nii -t threshold -o out.nii" << std::endl;
+		std::cerr << argv[0] << " -i head_cta.nii -m -s sigma head_cta_segm.nii -t threshold -o out.nii" << std::endl;
 		return EXIT_FAILURE;
 	}
 
 	const char* inputFileName = "";
 	char* outputFileName = "";
 	int threshold = 0;
+	double sigma = 0.;
 
 	for (int i = 1; i < argc; ++i) {
 		auto parametr = std::string(argv[i]);
@@ -39,9 +43,10 @@ int main(int argc, char* argv[])
 			outputFileName = argv[++i];
 			continue;
 		}
-		else 
+		else if (parametr == "-s")
 		{
-			//std::cout << "Incorrect label " << argv[i] << std::endl;
+			sigma = std::atof(argv[++i]);
+			continue;
 		}
 	}
 	constexpr unsigned int Dimension = 3;
@@ -52,7 +57,35 @@ int main(int argc, char* argv[])
 
 	reader->SetFileName(inputFileName);
 	reader->Update();
+
 	auto image = reader->GetOutput();
+
+	if (1)
+	{
+		reader->SetFileName(inputFileName);
+		reader->Update();
+		using FilterType = itk::RecursiveGaussianImageFilter<ImageType, ImageType>;
+		FilterType::Pointer smoothFilterX = FilterType::New();
+		FilterType::Pointer smoothFilterY = FilterType::New();
+		FilterType::Pointer smoothFilterZ = FilterType::New();
+		smoothFilterX->SetDirection(0);
+		smoothFilterY->SetDirection(1);
+		smoothFilterZ->SetDirection(2);
+		smoothFilterX->SetOrder(itk::GaussianOrderEnum::ZeroOrder);
+		smoothFilterY->SetOrder(itk::GaussianOrderEnum::ZeroOrder);
+		smoothFilterZ->SetOrder(itk::GaussianOrderEnum::ZeroOrder);
+		smoothFilterX->SetNormalizeAcrossScale(true);
+		smoothFilterY->SetNormalizeAcrossScale(true);
+		smoothFilterZ->SetNormalizeAcrossScale(true);
+		smoothFilterX->SetInput(reader->GetOutput());
+		smoothFilterY->SetInput(smoothFilterX->GetOutput());
+		smoothFilterZ->SetInput(smoothFilterY->GetOutput());
+		smoothFilterX->SetSigma(sigma); smoothFilterY->SetSigma(sigma); smoothFilterZ->SetSigma(sigma);
+		smoothFilterZ->Update();
+
+		auto image = smoothFilterZ->GetOutput();
+	}
+	
 	auto pointer = image->GetBufferPointer();
 
 	auto region = image->GetBufferedRegion();
@@ -75,6 +108,7 @@ int main(int argc, char* argv[])
 		voxelSet);
 	
 	Triangulation triangulation;
+	std::map<int, std::set<int>> neighbours;
 	
 	if (0)
 		computeTriangulationOfVoxelSet_MY(
@@ -86,6 +120,7 @@ int main(int argc, char* argv[])
 			x_sc, y_sc, z_sc
 		);
 	else
+		neighbours = 
 		computeTriangulationOfVoxelSet(
 			triangulation,
 			voxelSet,
@@ -93,12 +128,13 @@ int main(int argc, char* argv[])
 			x_sc, y_sc, z_sc
 		);
 
-	if (0)
-		triangulation.taubinSmoothing(1, 0.3, 0.301, false);
+	//Segmentation(triangulation, neighbours);
+
+	if (1)
+		Taubin(triangulation, neighbours, 0.33, -0.331, 15);
 	else
-	{
-		Taubin(triangulation, 0.33, -0.331, 20);
-	}
+		triangulation.taubinSmoothing(1, 0.33, 0.331, false);
+	
 		
 
 	std::ofstream out;
@@ -124,6 +160,9 @@ Voxel SearchSeed(short* pointer, int threshold, VoxelBox& voxelBox) {
 	for (int k = MaxSlices * 3 / 8; k < MaxSlices * 4 / 8; ++k) {
 		for (int i = xMax * 4 / 10; i < xMax * 5 / 10; ++i) {
 			for (int j = yMax * 4 / 10; j < yMax * 5 / 10; ++j) {
+	//for (int k = 0; k < MaxSlices; ++k) {
+	//	for (int i = 0; i < xMax; ++i) {
+	//		for (int j = 0; j < yMax; ++j) {
 				auto voxel = pointer + (i + j * xMax + k * xMax * yMax);
 				if (*voxel > threshold) {
 				

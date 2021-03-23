@@ -5,6 +5,7 @@
 //#include <vector>
 //#include <QString>
 #include <string>
+#include <set>
 #include "r2geom.h"
 #include "roi.h"        /* For Bitmask */
 #include "R3Graph.h"
@@ -292,12 +293,14 @@ double detectVoxelSetFromCta(
     VoxelSet& voxelSet
 );
 
-void computeTriangulationOfVoxelSet(
+std::map<int, std::set<int>> computeTriangulationOfVoxelSet(
     Triangulation& triangulation,
     const VoxelSet& voxelSet,
     const R3Graph::R3Point& origin,
     double dx, double dy, double dz
 );
+
+void FillNeighbours(std::map<int, std::set<int>>&, std::vector<int>&);
 
 void computeTriangulationOfVoxelSet_MY(
     short* pointer,

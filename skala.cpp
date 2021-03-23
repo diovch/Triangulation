@@ -8,7 +8,7 @@
 using namespace R3Graph;
 
 static double dh = 0.01;
-static const double EPS2 = R3_EPSILON*10.;
+static const double EPS2 = R3_EPSILON * 10.;
 
 class ScalaMatrix {
 private:
@@ -17,37 +17,37 @@ private:
     double* v;
 
 private:
-    ScalaMatrix():
+    ScalaMatrix() :
         nx(0),
         ny(0),
         v(0)
     {}
 
 public:
-    ScalaMatrix(int sx, int sy):
+    ScalaMatrix(int sx, int sy) :
         nx(sx),
         ny(sy),
-        v(new double[sx*sy])
+        v(new double[sx * sy])
     {}
 
-    ScalaMatrix(const ScalaMatrix& m):
+    ScalaMatrix(const ScalaMatrix& m) :
         nx(m.nx),
         ny(m.ny),
-        v(new double[nx*ny])
+        v(new double[nx * ny])
     {
-        memmove(v, m.v, nx*ny*sizeof(double));
+        memmove(v, m.v, nx * ny * sizeof(double));
     }
 
     ~ScalaMatrix() { delete[] v; }
 
     ScalaMatrix& operator=(const ScalaMatrix& m) {
-        if (nx*ny > m.nx*m.ny) {
+        if (nx * ny > m.nx * m.ny) {
             delete[] v;
-            v = new double[m.nx*m.ny];
+            v = new double[m.nx * m.ny];
         }
         nx = m.nx;
         ny = m.ny;
-        memmove(v, m.v, nx*ny*sizeof(double));
+        memmove(v, m.v, nx * ny * sizeof(double));
         return *this;
     }
 
@@ -55,17 +55,17 @@ public:
     int sizeY() const { return ny; }
 
     double* operator[](int iy) {
-        return v + iy*nx;
+        return v + iy * nx;
     }
     const double* operator[](int iy) const {
-        return v + iy*nx;
+        return v + iy * nx;
     }
 
     double& at(int x, int y) {
-        return v[y*nx + x];
+        return v[y * nx + x];
     }
     const double& at(int x, int y) const {
-        return v[y*nx + x];
+        return v[y * nx + x];
     }
 };
 
@@ -75,13 +75,13 @@ public:
     int iy;
     int iz;
 
-    TPoint():
+    TPoint() :
         ix(0),
         iy(0),
         iz(0)
     {}
 
-    TPoint(int x, int y, int z):
+    TPoint(int x, int y, int z) :
         ix(x),
         iy(y),
         iz(z)
@@ -99,26 +99,26 @@ public:
         return (
             ix < tp.ix || (
                 ix == tp.ix && (
-                    iy  < tp.iy || (
+                    iy < tp.iy || (
                         iy == tp.iy &&
                         iz < tp.iz
+                        )
                     )
                 )
-            )
-        );
+            );
     }
 
     bool operator<=(const TPoint& tp) const {
         return (
             ix < tp.ix || (
                 ix == tp.ix && (
-                    iy  < tp.iy || (
+                    iy < tp.iy || (
                         iy == tp.iy &&
                         iz <= tp.iz
+                        )
                     )
                 )
-            )
-        );
+            );
     }
 
     bool operator>(const TPoint& tp) const {
@@ -134,9 +134,9 @@ public:
         double dx, double dy, double dz
     ) const {
         return R3Point(
-            origin.x + dx*(double) ix,
-            origin.y + dy*(double) iy,
-            origin.z + dz*(double) iz
+            origin.x + dx * (double)ix,
+            origin.y + dy * (double)iy,
+            origin.z + dz * (double)iz
         );
     }
 };
@@ -146,34 +146,37 @@ public:
     TPoint point[2];
     int vertexIdx;
 
-    TEdge():
+    TEdge() :
         vertexIdx(-1)
     {}
 
-    TEdge(const TPoint& p0, const TPoint& p1):
+    TEdge(const TPoint& p0, const TPoint& p1) :
         vertexIdx(-1)
     {
+        assert(p0 != p1);
         if (p0 <= p1) {
             point[0] = p0;
             point[1] = p1;
-        } else {
+        }
+        else {
             point[0] = p1;
             point[1] = p0;
         }
+        assert(point[0] < point[1]);
     }
 
     bool operator==(const TEdge& te) const {
         return (
             point[0] == te.point[0] &&
             point[1] == te.point[1]
-        );
+            );
     }
 
     bool operator!=(const TEdge& te) const {
         return (
             point[0] != te.point[0] ||
             point[1] != te.point[1]
-        );
+            );
     }
 
     bool operator<(const TEdge& te) const {
@@ -181,8 +184,8 @@ public:
             point[0] < te.point[0] || (
                 point[0] == te.point[0] &&
                 point[1] < te.point[1]
-            )
-        );
+                )
+            );
     }
 
     bool operator<=(const TEdge& te) const {
@@ -190,8 +193,8 @@ public:
             point[0] < te.point[0] || (
                 point[0] == te.point[0] &&
                 point[1] <= te.point[1]
-            )
-        );
+                )
+            );
     }
 
     bool operator>(const TEdge& te) const {
@@ -211,7 +214,7 @@ public:
         if (
             (v0 > 0. && v1 > 0.) ||
             (v0 < 0. && v1 < 0.)
-        ) {
+            ) {
             return false;
         }
         double w0 = fabs(v0);
@@ -235,12 +238,12 @@ public:
             origin, dx, dy, dz
         );
         // vertex = p0 + (p1 - p0)*(w0/(w0 + w1));
-        vertex = p0 + (p1 - p0)*(v0/(v0 - v1));
+        vertex = p0 + (p1 - p0) * (v0 / (v0 - v1));
         return true;
     }
 };
 
-class TBox: public R3Box {
+class TBox : public R3Box {
 public:
     int nx;
     int ny;
@@ -257,42 +260,42 @@ public:
     TBox(
         const R3Point& o, const R3Vector& s,
         int numX, int numY, int numZ
-    ):
+    ) :
         R3Box(o, s),
         nx(numX),
         ny(numY),
         nz(numZ)
     {
         assert(nx > 0);
-        dx = size.x / (double) nx;
+        dx = size.x / (double)nx;
 
         assert(ny > 0);
-        dy = size.y / (double) ny;
+        dy = size.y / (double)ny;
 
         assert(nz > 0);
-        dz = size.z / (double) nz;
+        dz = size.z / (double)nz;
     }
 
     void setNx(int n) {
         assert(n > 0);
         nx = n;
-        dx = size.x / (double) n;
+        dx = size.x / (double)n;
     }
 
     void setNy(int n) {
         assert(n > 0);
         ny = n;
-        dy = size.y / (double) n;
+        dy = size.y / (double)n;
     }
 
     void setNz(int n) {
         assert(n > 0);
         nz = n;
-        dz = size.z / (double) n;
+        dz = size.z / (double)n;
     }
 
     R3Point gridPoint(int ix, int iy, int iz) const {
-        return origin + R3Vector(dx*ix, dy*iy, dz*iz);
+        return origin + R3Vector(dx * ix, dy * iy, dz * iz);
     }
 };
 
@@ -352,24 +355,24 @@ void skalaMethod(
     R3Vector vdy(0., dy, 0.);
     R3Vector vdz(0., 0., dz);
 
-    double dx2 = dx/2.;
-    double dy2 = dy/2.;
-    double dz2 = dz/2.;
+    double dx2 = dx / 2.;
+    double dy2 = dy / 2.;
+    double dz2 = dz / 2.;
 
     R3Vector vdx2(dx2, 0., 0.);
     R3Vector vdy2(0., dy2, 0.);
     R3Vector vdz2(0., 0., dz2);
 
-    int numX2 = numX*2;
-    int numY2 = numY*2;
-    int numZ2 = numZ*2;
+    int numX2 = numX * 2;
+    int numY2 = numY * 2;
+    int numZ2 = numZ * 2;
 
     R3Point blueOrigin = box.origin;
     R3Point redOrigin = blueOrigin + R3Vector(dx2, dy2, dz2);
 
     // For gradient calculation
-    if (dh > dx/10.)
-        dh = dx/10.;
+    if (dh > dx / 10.)
+        dh = dx / 10.;
 
     TBox tbox(
         redOrigin, box.size,
@@ -380,7 +383,7 @@ void skalaMethod(
     ScalaMatrix redMatrix0(numX + 1, numY + 1);
     ScalaMatrix redMatrix1(numX + 1, numY + 1);
     for (int iy = 0; iy <= numY; ++iy) {
-        R3Point row0 = redOrigin + vdy*iy;
+        R3Point row0 = redOrigin + vdy * iy;
         R3Point row1 = row0 + vdz;
         for (int ix = 0; ix <= numX; ++ix) {
             //... redMatrix0.at(ix, iy) = (*f)(row0);
@@ -402,10 +405,10 @@ void skalaMethod(
 
     ScalaMatrix blueMatrix0(numX + 2, numY + 2);
     ScalaMatrix blueMatrix1(numX + 2, numY + 2);
-    for (int iy = 0; iy <= numY+1; ++iy) {
-        R3Point row0 = blueOrigin + vdy*iy;
+    for (int iy = 0; iy <= numY + 1; ++iy) {
+        R3Point row0 = blueOrigin + vdy * iy;
         R3Point row1 = row0 + vdz;
-        for (int ix = 0; ix <= numX+1; ++ix) {
+        for (int ix = 0; ix <= numX + 1; ++ix) {
             //... blueMatrix0.at(ix, iy) = (*f)(row0);
             double vr0 = (*f)(row0);
             if (fabs(vr0) <= R3_EPSILON)
@@ -431,10 +434,10 @@ void skalaMethod(
     for (int iz = 1; iz < numZ2; iz += 2) {
         for (int iy = 1; iy < numY2; iy += 2) {
             // Horizontal edges X: *---*---*--- ... *---*
-            for (int ix = 1; ix < numX2-2; ix += 2) {
+            for (int ix = 1; ix < numX2 - 2; ix += 2) {
                 TEdge edgeX(
                     TPoint(ix, iy, iz),
-                    TPoint(ix+2, iy, iz)
+                    TPoint(ix + 2, iy, iz)
                 );
                 processEdgeX(
                     edgeX,
@@ -448,11 +451,11 @@ void skalaMethod(
             } // end for (ix...
 
             // Horizontal edges Y: |  |  | ... |
-            if (iy != numY2-1) {
+            if (iy != numY2 - 1) {
                 for (int ix = 1; ix < numX2; ix += 2) {
                     TEdge edgeY(
                         TPoint(ix, iy, iz),
-                        TPoint(ix, iy+2, iz)
+                        TPoint(ix, iy + 2, iz)
                     );
                     processEdgeY(
                         edgeY,
@@ -467,11 +470,11 @@ void skalaMethod(
             } // end if
 
             // Vertical edges Z
-            if (iz != numZ2-1) {
+            if (iz != numZ2 - 1) {
                 for (int ix = 1; ix < numX2; ix += 2) {
                     TEdge edgeZ(
                         TPoint(ix, iy, iz),
-                        TPoint(ix, iy, iz+2)
+                        TPoint(ix, iy, iz + 2)
                     );
                     processEdgeZ(
                         edgeZ,
@@ -491,7 +494,7 @@ void skalaMethod(
 
         redOriginZ += vdz;
         for (int iy = 0; iy <= numY; ++iy) {
-            R3Point row1 = redOriginZ + vdy*iy;
+            R3Point row1 = redOriginZ + vdy * iy;
             for (int ix = 0; ix <= numX; ++ix) {
                 //... redMatrix1.at(ix, iy) = (*f)(row1);
                 double vr1 = (*f)(row1);
@@ -505,7 +508,7 @@ void skalaMethod(
 
         blueOriginZ += vdz;
         for (int iy = 0; iy <= numY; ++iy) {
-            R3Point row1 = blueOriginZ + vdy*iy;
+            R3Point row1 = blueOriginZ + vdy * iy;
             for (int ix = 0; ix <= numX; ++ix) {
                 //... blueMatrix1.at(ix, iy) = (*f)(row1);
                 double vr1 = (*f)(row1);
@@ -554,11 +557,11 @@ void processEdgeX(
         edgeX.point[0].iz == edgeX.point[1].iz
     );
 
-    int ixRed0 = (edgeX.point[0].ix - 1)/2;
-    int iyRed0 = (edgeX.point[0].iy - 1)/2;
+    int ixRed0 = (edgeX.point[0].ix - 1) / 2;
+    int iyRed0 = (edgeX.point[0].iy - 1) / 2;
 
-    int ixRed1 = (edgeX.point[1].ix - 1)/2;
-    int iyRed1 = (edgeX.point[1].iy - 1)/2;
+    int ixRed1 = (edgeX.point[1].ix - 1) / 2;
+    int iyRed1 = (edgeX.point[1].iy - 1) / 2;
 
     double v0 = redMatrix0.at(ixRed0, iyRed0);
     double v1 = redMatrix0.at(ixRed1, iyRed1);
@@ -568,20 +571,29 @@ void processEdgeX(
     if (
         (v0 <= 0. && v1 >= 0.) ||
         (v0 >= 0. && v1 <= 0.)
-    ) {
-        vertexOnEdgeExists = edgeX.computeVertex(
-            v0, v1,
-            tbox.origin,
-            tbox.dx, tbox.dy, tbox.dz,
-            vertexOnEdge
-        );
-        assert(vertexOnEdgeExists);
-        assert(tbox.contains(vertexOnEdge));
+        ) {
+        if (edges.count(edgeX) == 0) {
+            vertexOnEdgeExists = edgeX.computeVertex(
+                v0, v1,
+                tbox.origin,
+                tbox.dx, tbox.dy, tbox.dz,
+                vertexOnEdge
+            );
+            assert(vertexOnEdgeExists);
+            assert(tbox.contains(vertexOnEdge));
 
-        // Add a vertex to triangulation
-        triangulation.vertices.push_back(vertexOnEdge);
-        int vertexIdx = (int)(triangulation.vertices.size() - 1);
-        edges[edgeX] = vertexIdx;
+            // Add a vertex to triangulation
+            triangulation.vertices.push_back(vertexOnEdge);
+            int vertexIdx = (int)(triangulation.vertices.size() - 1);
+            edgeX.vertexIdx = vertexIdx;        // for safety
+            edges[edgeX] = vertexIdx;
+        }
+        else {
+            if (edgeX.vertexIdx < 0) {
+                edgeX.vertexIdx = edges[edgeX];
+            }
+            assert(edgeX.vertexIdx == edges[edgeX]);
+        }
     }
 
     // Surrounding edges
@@ -598,42 +610,42 @@ void processEdgeX(
     );
 
     vertexValue[0] = blueMatrix0.at(
-        blue_ix/2, blue_iy/2
+        blue_ix / 2, blue_iy / 2
     );
     vertexValue[1] = blueMatrix0.at(
-        blue_ix/2, blue_iy/2 + 1
+        blue_ix / 2, blue_iy / 2 + 1
     );
     vertexValue[2] = blueMatrix1.at(
-        blue_ix/2, blue_iy/2
+        blue_ix / 2, blue_iy / 2
     );
     vertexValue[3] = blueMatrix1.at(
-        blue_ix/2, blue_iy/2 + 1
+        blue_ix / 2, blue_iy / 2 + 1
     );
 
     edgesYZ[0] = TEdge(
         TPoint(blue_ix, blue_iy, blue_iz),
-        TPoint(blue_ix, blue_iy+2, blue_iz)
+        TPoint(blue_ix, blue_iy + 2, blue_iz)
     );
     edgeValue[0][0] = vertexValue[0];
     edgeValue[0][1] = vertexValue[1];
 
     edgesYZ[1] = TEdge(
-        TPoint(blue_ix, blue_iy, blue_iz+2),
-        TPoint(blue_ix, blue_iy+2, blue_iz+2)
+        TPoint(blue_ix, blue_iy, blue_iz + 2),
+        TPoint(blue_ix, blue_iy + 2, blue_iz + 2)
     );
     edgeValue[1][0] = vertexValue[2];
     edgeValue[1][1] = vertexValue[3];
 
     edgesYZ[2] = TEdge(
         TPoint(blue_ix, blue_iy, blue_iz),
-        TPoint(blue_ix, blue_iy, blue_iz+2)
+        TPoint(blue_ix, blue_iy, blue_iz + 2)
     );
     edgeValue[2][0] = vertexValue[0];
     edgeValue[2][1] = vertexValue[2];
 
     edgesYZ[3] = TEdge(
-        TPoint(blue_ix, blue_iy+2, blue_iz),
-        TPoint(blue_ix, blue_iy+2, blue_iz+2)
+        TPoint(blue_ix, blue_iy + 2, blue_iz),
+        TPoint(blue_ix, blue_iy + 2, blue_iz + 2)
     );
     edgeValue[3][0] = vertexValue[1];
     edgeValue[3][1] = vertexValue[3];
@@ -646,20 +658,29 @@ void processEdgeX(
         if (
             (w0 <= 0. && w1 >= 0.) ||
             (w0 >= 0. && w1 <= 0.)
-        ) {
-            bool vertexOK = edgesYZ[i].computeVertex(
-                w0, w1,
-                tbox.origin,
-                tbox.dx, tbox.dy, tbox.dz,
-                vertexYZ
-            );
-            assert(vertexOK);
-            assert(tbox.contains(vertexYZ));
+            ) {
+            if (edges.count(edgesYZ[i]) == 0) {
+                bool vertexOK = edgesYZ[i].computeVertex(
+                    w0, w1,
+                    tbox.origin,
+                    tbox.dx, tbox.dy, tbox.dz,
+                    vertexYZ
+                );
+                assert(vertexOK);
+                assert(tbox.contains(vertexYZ));
 
-            // Add a vertex to triangulation
-            triangulation.vertices.push_back(vertexYZ);
-            int vertexIdx = (int)(triangulation.vertices.size() - 1);
-            edges[edgesYZ[i]] = vertexIdx;
+                // Add a vertex to triangulation
+                triangulation.vertices.push_back(vertexYZ);
+                int vertexIdx = (int)(triangulation.vertices.size() - 1);
+                edgesYZ[i].vertexIdx = vertexIdx;       // for safety
+                edges[edgesYZ[i]] = vertexIdx;
+            }
+            else {
+                if (edgesYZ[i].vertexIdx < 0) {
+                    edgesYZ[i].vertexIdx = edges[edgesYZ[i]];
+                }
+                assert(edgesYZ[i].vertexIdx == edges[edgesYZ[i]]);
+            }
         }
 
         processTetrahedron(
@@ -693,11 +714,11 @@ void processEdgeY(
         edgeY.point[0].iz == edgeY.point[1].iz
     );
 
-    int ixRed0 = (edgeY.point[0].ix - 1)/2;
-    int iyRed0 = (edgeY.point[0].iy - 1)/2;
+    int ixRed0 = (edgeY.point[0].ix - 1) / 2;
+    int iyRed0 = (edgeY.point[0].iy - 1) / 2;
 
-    int ixRed1 = (edgeY.point[1].ix - 1)/2;
-    int iyRed1 = (edgeY.point[1].iy - 1)/2;
+    int ixRed1 = (edgeY.point[1].ix - 1) / 2;
+    int iyRed1 = (edgeY.point[1].iy - 1) / 2;
 
     double v0 = redMatrix0.at(ixRed0, iyRed0);
     double v1 = redMatrix0.at(ixRed1, iyRed1);
@@ -707,20 +728,29 @@ void processEdgeY(
     if (
         (v0 <= 0. && v1 >= 0.) ||
         (v0 >= 0. && v1 <= 0.)
-    ) {
-        vertexOnEdgeExists = edgeY.computeVertex(
-            v0, v1,
-            tbox.origin,
-            tbox.dx, tbox.dy, tbox.dz,
-            vertexOnEdge
-        );
-        assert(vertexOnEdgeExists);
-        assert(tbox.contains(vertexOnEdge));
+        ) {
+        if (edges.count(edgeY) == 0) {
+            vertexOnEdgeExists = edgeY.computeVertex(
+                v0, v1,
+                tbox.origin,
+                tbox.dx, tbox.dy, tbox.dz,
+                vertexOnEdge
+            );
+            assert(vertexOnEdgeExists);
+            assert(tbox.contains(vertexOnEdge));
 
-        // Add a vertex to triangulation
-        triangulation.vertices.push_back(vertexOnEdge);
-        int vertexIdx = (int)(triangulation.vertices.size() - 1);
-        edges[edgeY] = vertexIdx;
+            // Add a vertex to triangulation
+            triangulation.vertices.push_back(vertexOnEdge);
+            int vertexIdx = (int)(triangulation.vertices.size() - 1);
+            edgeY.vertexIdx = vertexIdx;        // for safety
+            edges[edgeY] = vertexIdx;
+        }
+        else {
+            if (edgeY.vertexIdx < 0) {
+                edgeY.vertexIdx = edges[edgeY];
+            }
+            assert(edgeY.vertexIdx == edges[edgeY]);
+        }
     }
 
     // Surrounding edges
@@ -737,42 +767,42 @@ void processEdgeY(
     );
 
     vertexValue[0] = blueMatrix0.at(
-        blue_ix/2, blue_iy/2
+        blue_ix / 2, blue_iy / 2
     );
     vertexValue[1] = blueMatrix0.at(
-        blue_ix/2+1, blue_iy/2
+        blue_ix / 2 + 1, blue_iy / 2
     );
     vertexValue[2] = blueMatrix1.at(
-        blue_ix/2, blue_iy/2
+        blue_ix / 2, blue_iy / 2
     );
     vertexValue[3] = blueMatrix1.at(
-        blue_ix/2+1, blue_iy/2
+        blue_ix / 2 + 1, blue_iy / 2
     );
 
     edgesXZ[0] = TEdge(
         TPoint(blue_ix, blue_iy, blue_iz),
-        TPoint(blue_ix+2, blue_iy, blue_iz)
+        TPoint(blue_ix + 2, blue_iy, blue_iz)
     );
     edgeValue[0][0] = vertexValue[0];
     edgeValue[0][1] = vertexValue[1];
 
     edgesXZ[1] = TEdge(
-        TPoint(blue_ix, blue_iy, blue_iz+2),
-        TPoint(blue_ix+2, blue_iy, blue_iz+2)
+        TPoint(blue_ix, blue_iy, blue_iz + 2),
+        TPoint(blue_ix + 2, blue_iy, blue_iz + 2)
     );
     edgeValue[1][0] = vertexValue[2];
     edgeValue[1][1] = vertexValue[3];
 
     edgesXZ[2] = TEdge(
         TPoint(blue_ix, blue_iy, blue_iz),
-        TPoint(blue_ix, blue_iy, blue_iz+2)
+        TPoint(blue_ix, blue_iy, blue_iz + 2)
     );
     edgeValue[2][0] = vertexValue[0];
     edgeValue[2][1] = vertexValue[2];
 
     edgesXZ[3] = TEdge(
-        TPoint(blue_ix+2, blue_iy, blue_iz),
-        TPoint(blue_ix+2, blue_iy, blue_iz+2)
+        TPoint(blue_ix + 2, blue_iy, blue_iz),
+        TPoint(blue_ix + 2, blue_iy, blue_iz + 2)
     );
     edgeValue[3][0] = vertexValue[1];
     edgeValue[3][1] = vertexValue[3];
@@ -785,20 +815,29 @@ void processEdgeY(
         if (
             (w0 <= 0. && w1 >= 0.) ||
             (w0 >= 0. && w1 <= 0.)
-        ) {
-            bool vertexOK = edgesXZ[i].computeVertex(
-                w0, w1,
-                tbox.origin,
-                tbox.dx, tbox.dy, tbox.dz,
-                vertexXZ
-            );
-            assert(vertexOK);
-            assert(tbox.contains(vertexXZ));
+            ) {
+            if (edges.count(edgesXZ[i]) == 0) {
+                bool vertexOK = edgesXZ[i].computeVertex(
+                    w0, w1,
+                    tbox.origin,
+                    tbox.dx, tbox.dy, tbox.dz,
+                    vertexXZ
+                );
+                assert(vertexOK);
+                assert(tbox.contains(vertexXZ));
 
-            // Add a vertex to triangulation
-            triangulation.vertices.push_back(vertexXZ);
-            int vertexIdx = (int)(triangulation.vertices.size() - 1);
-            edges[edgesXZ[i]] = vertexIdx;
+                // Add a vertex to triangulation
+                triangulation.vertices.push_back(vertexXZ);
+                int vertexIdx = (int)(triangulation.vertices.size() - 1);
+                edgesXZ[i].vertexIdx = vertexIdx;       // for safety
+                edges[edgesXZ[i]] = vertexIdx;
+            }
+            else {
+                if (edgesXZ[i].vertexIdx < 0) {
+                    edgesXZ[i].vertexIdx = edges[edgesXZ[i]];
+                }
+                assert(edgesXZ[i].vertexIdx == edges[edgesXZ[i]]);
+            }
         }
 
         processTetrahedron(
@@ -832,11 +871,11 @@ void processEdgeZ(
         edgeZ.point[0].iy == edgeZ.point[1].iy
     );
 
-    int ixRed0 = (edgeZ.point[0].ix - 1)/2;
-    int iyRed0 = (edgeZ.point[0].iy - 1)/2;
+    int ixRed0 = (edgeZ.point[0].ix - 1) / 2;
+    int iyRed0 = (edgeZ.point[0].iy - 1) / 2;
 
-    int ixRed1 = (edgeZ.point[1].ix - 1)/2;
-    int iyRed1 = (edgeZ.point[1].iy - 1)/2;
+    int ixRed1 = (edgeZ.point[1].ix - 1) / 2;
+    int iyRed1 = (edgeZ.point[1].iy - 1) / 2;
 
     assert(ixRed0 == ixRed1 && iyRed0 == iyRed1);
 
@@ -848,20 +887,29 @@ void processEdgeZ(
     if (
         (v0 <= 0. && v1 >= 0.) ||
         (v0 >= 0. && v1 <= 0.)
-    ) {
-        vertexOnEdgeExists = edgeZ.computeVertex(
-            v0, v1,
-            tbox.origin,
-            tbox.dx, tbox.dy, tbox.dz,
-            vertexOnEdge
-        );
-        assert(vertexOnEdgeExists);
-        assert(tbox.contains(vertexOnEdge));
+        ) {
+        if (edges.count(edgeZ) == 0) {
+            vertexOnEdgeExists = edgeZ.computeVertex(
+                v0, v1,
+                tbox.origin,
+                tbox.dx, tbox.dy, tbox.dz,
+                vertexOnEdge
+            );
+            assert(vertexOnEdgeExists);
+            assert(tbox.contains(vertexOnEdge));
 
-        // Add a vertex to triangulation
-        triangulation.vertices.push_back(vertexOnEdge);
-        int vertexIdx = (int)(triangulation.vertices.size() - 1);
-        edges[edgeZ] = vertexIdx;
+            // Add a vertex to triangulation
+            triangulation.vertices.push_back(vertexOnEdge);
+            int vertexIdx = (int)(triangulation.vertices.size() - 1);
+            edgeZ.vertexIdx = vertexIdx;        // for safety
+            edges[edgeZ] = vertexIdx;
+        }
+        else {
+            if (edgeZ.vertexIdx < 0) {
+                edgeZ.vertexIdx = edges[edgeZ];
+            }
+            assert(edgeZ.vertexIdx == edges[edgeZ]);
+        }
     }
 
     // Surrounding edges
@@ -878,42 +926,42 @@ void processEdgeZ(
     );
 
     vertexValue[0] = blueMatrix1.at(
-        blue_ix/2, blue_iy/2
+        blue_ix / 2, blue_iy / 2
     );
     vertexValue[1] = blueMatrix1.at(
-        blue_ix/2+1, blue_iy/2
+        blue_ix / 2 + 1, blue_iy / 2
     );
     vertexValue[2] = blueMatrix1.at(
-        blue_ix/2, blue_iy/2+1
+        blue_ix / 2, blue_iy / 2 + 1
     );
     vertexValue[3] = blueMatrix1.at(
-        blue_ix/2+1, blue_iy/2+1
+        blue_ix / 2 + 1, blue_iy / 2 + 1
     );
 
     edgesXY[0] = TEdge(
         TPoint(blue_ix, blue_iy, blue_iz),
-        TPoint(blue_ix+2, blue_iy, blue_iz)
+        TPoint(blue_ix + 2, blue_iy, blue_iz)
     );
     edgeValue[0][0] = vertexValue[0];
     edgeValue[0][1] = vertexValue[1];
 
     edgesXY[1] = TEdge(
-        TPoint(blue_ix, blue_iy+2, blue_iz),
-        TPoint(blue_ix+2, blue_iy+2, blue_iz)
+        TPoint(blue_ix, blue_iy + 2, blue_iz),
+        TPoint(blue_ix + 2, blue_iy + 2, blue_iz)
     );
     edgeValue[1][0] = vertexValue[2];
     edgeValue[1][1] = vertexValue[3];
 
     edgesXY[2] = TEdge(
         TPoint(blue_ix, blue_iy, blue_iz),
-        TPoint(blue_ix, blue_iy+2, blue_iz)
+        TPoint(blue_ix, blue_iy + 2, blue_iz)
     );
     edgeValue[2][0] = vertexValue[0];
     edgeValue[2][1] = vertexValue[2];
 
     edgesXY[3] = TEdge(
-        TPoint(blue_ix+2, blue_iy, blue_iz),
-        TPoint(blue_ix+2, blue_iy+2, blue_iz)
+        TPoint(blue_ix + 2, blue_iy, blue_iz),
+        TPoint(blue_ix + 2, blue_iy + 2, blue_iz)
     );
     edgeValue[3][0] = vertexValue[1];
     edgeValue[3][1] = vertexValue[3];
@@ -926,20 +974,29 @@ void processEdgeZ(
         if (
             (w0 <= 0. && w1 >= 0.) ||
             (w0 >= 0. && w1 <= 0.)
-        ) {
-            bool vertexOK = edgesXY[i].computeVertex(
-                w0, w1,
-                tbox.origin,
-                tbox.dx, tbox.dy, tbox.dz,
-                vertexXY
-            );
-            assert(vertexOK);
-            assert(tbox.contains(vertexXY));
+            ) {
+            if (edges.count(edgesXY[i]) == 0) {
+                bool vertexOK = edgesXY[i].computeVertex(
+                    w0, w1,
+                    tbox.origin,
+                    tbox.dx, tbox.dy, tbox.dz,
+                    vertexXY
+                );
+                assert(vertexOK);
+                assert(tbox.contains(vertexXY));
 
-            // Add a vertex to triangulation
-            triangulation.vertices.push_back(vertexXY);
-            int vertexIdx = (int)(triangulation.vertices.size() - 1);
-            edges[edgesXY[i]] = vertexIdx;
+                // Add a vertex to triangulation
+                triangulation.vertices.push_back(vertexXY);
+                int vertexIdx = (int)(triangulation.vertices.size() - 1);
+                edgesXY[i].vertexIdx = vertexIdx;       // for safety
+                edges[edgesXY[i]] = vertexIdx;
+            }
+            else {
+                if (edgesXY[i].vertexIdx < 0) {
+                    edgesXY[i].vertexIdx = edges[edgesXY[i]];
+                }
+                assert(edgesXY[i].vertexIdx == edges[edgesXY[i]]);
+            }
         }
 
         processTetrahedron(
@@ -995,15 +1052,15 @@ void processTetrahedron(
             redValue1 < 0. &&
             blueValue0 < 0. &&
             blueValue1 < 0.
-        )
+            )
         ||
         (
             redValue0 > 0. &&
             redValue1 > 0. &&
             blueValue0 > 0. &&
             blueValue1 > 0.
+            )
         )
-    )
         return; // Nothing to do
 
     TPoint p[4];
@@ -1017,135 +1074,141 @@ void processTetrahedron(
             redValue1 < 0. &&
             blueValue0 < 0. &&
             blueValue1 < 0.
-        )
+            )
         ||
         (
             redValue0 < 0. &&   // <--
             redValue1 > 0. &&
             blueValue0 > 0. &&
             blueValue1 > 0.
-        )
-    ) {
+            )
+        ) {
         numPoints = 1;
         p[0] = redEdge.point[0]; w[0] = redValue0;
         p[1] = redEdge.point[1]; w[1] = redValue1;
         p[2] = blueEdge.point[0]; w[2] = blueValue0;
         p[3] = blueEdge.point[1]; w[3] = blueValue1;
-    } else if (
+    }
+    else if (
         (
             redValue0 < 0. &&
             redValue1 > 0. &&   // <--
             blueValue0 < 0. &&
             blueValue1 < 0.
-        )
+            )
         ||
         (
             redValue0 > 0. &&
             redValue1 < 0. &&   // <--
             blueValue0 > 0. &&
             blueValue1 > 0.
-        )
-    ) {
+            )
+        ) {
         numPoints = 1;
         p[0] = redEdge.point[1]; w[0] = redValue1;
         p[1] = redEdge.point[0]; w[1] = redValue0;
         p[2] = blueEdge.point[0]; w[2] = blueValue0;
         p[3] = blueEdge.point[1]; w[3] = blueValue1;
-    } else if (
+    }
+    else if (
         (
             redValue0 < 0. &&
             redValue1 < 0. &&
             blueValue0 > 0. &&  // <--
             blueValue1 < 0.
-        )
+            )
         ||
         (
             redValue0 > 0. &&
             redValue1 > 0. &&
             blueValue0 < 0. &&  // <--
             blueValue1 > 0.
-        )
-    ) {
+            )
+        ) {
         numPoints = 1;
         p[0] = blueEdge.point[0]; w[0] = blueValue0;
         p[1] = blueEdge.point[1]; w[1] = blueValue1;
         p[2] = redEdge.point[0]; w[2] = redValue0;
         p[3] = redEdge.point[1]; w[3] = redValue1;
-    } else if (
+    }
+    else if (
         (
             redValue0 < 0. &&
             redValue1 < 0. &&
             blueValue0 < 0. &&
             blueValue1 > 0.     // <--
-        )
+            )
         ||
         (
             redValue0 > 0. &&
             redValue1 > 0. &&
             blueValue0 > 0. &&
             blueValue1 < 0.     // <--
-        )
-    ) {
+            )
+        ) {
         numPoints = 1;
         p[0] = blueEdge.point[1]; w[0] = blueValue1;
         p[1] = blueEdge.point[0]; w[1] = blueValue0;
         p[2] = redEdge.point[0]; w[2] = redValue0;
         p[3] = redEdge.point[1]; w[3] = redValue1;
-    } else if (
+    }
+    else if (
         (
             redValue0 > 0. &&   // <--
             redValue1 > 0. &&   // <--
             blueValue0 < 0. &&
             blueValue1 < 0.
-        )
+            )
         ||
         (
             redValue0 < 0. &&   // <--
             redValue1 < 0. &&   // <--
             blueValue0 > 0. &&
             blueValue1 > 0.
-        )
-    ) {
+            )
+        ) {
         numPoints = 2;
         p[0] = redEdge.point[0]; w[0] = redValue0;
         p[1] = redEdge.point[1]; w[1] = redValue1;
         p[2] = blueEdge.point[0]; w[2] = blueValue0;
         p[3] = blueEdge.point[1]; w[3] = blueValue1;
-    } else if (
+    }
+    else if (
         (
             redValue0 > 0. &&   // <--
             redValue1 < 0. &&
             blueValue0 > 0. &&  // <--
             blueValue1 < 0.
-        )
+            )
         ||
         (
             redValue0 < 0. &&   // <--
             redValue1 > 0. &&
             blueValue0 < 0. &&  // <--
             blueValue1 > 0.
-        )
-    ) {
+            )
+        ) {
         numPoints = 2;
         p[0] = redEdge.point[0]; w[0] = redValue0;
         p[1] = blueEdge.point[0]; w[1] = blueValue0;
         p[2] = redEdge.point[1]; w[2] = redValue1;
         p[3] = blueEdge.point[1]; w[3] = blueValue1;
-    } else if (
+    }
+    else if (
         (
             redValue0 > 0. &&   // <--
             redValue1 < 0. &&
             blueValue0 < 0. &&
             blueValue1 > 0.     // <--
-        )
+            )
         ||
         (
             redValue0 < 0. &&   // <--
             redValue1 > 0. &&
             blueValue0 > 0. &&
             blueValue1 < 0.     // <--
-        )
-    ) {
+            )
+        ) {
         numPoints = 2;
         p[0] = redEdge.point[0]; w[0] = redValue0;
         p[1] = blueEdge.point[1]; w[1] = blueValue1;
@@ -1162,7 +1225,8 @@ void processTetrahedron(
                 star[starLen] = TEdge(p[0], p[i]);
                 v[starLen][0] = w[0];
                 v[starLen][1] = w[i];
-            } else {
+            }
+            else {
                 star[starLen] = TEdge(p[i], p[0]);
                 v[starLen][0] = w[i];
                 v[starLen][1] = w[0];
@@ -1194,7 +1258,8 @@ void processTetrahedron(
                 triangulation.vertices.push_back(vertexOnEdge);
                 vertexIdx[i] = (int)(triangulation.vertices.size() - 1);
                 edges[star[i]] = vertexIdx[i];
-            } else {
+            }
+            else {
                 vertexIdx[i] = edges[star[i]];
             }
         }
@@ -1217,22 +1282,24 @@ void processTetrahedron(
         double dotprod = n * (t0 - t1);
         //... if ((dotprod >= 0. && w[0] <= 0.) || (dotprod <= 0. && w[0] >= 0.)) {
         if (
-            (dotprod >= 0. && w[0] >= 0.) || 
+            (dotprod >= 0. && w[0] >= 0.) ||
             (dotprod <= 0. && w[0] <= 0.)
-        ) {
+            ) {
             triangulation.triangles.push_back(
                 Triangulation::Triangle(
                     vertexIdx[0], vertexIdx[1], vertexIdx[2]
                 )
             );
-        } else {
+        }
+        else {
             triangulation.triangles.push_back(
                 Triangulation::Triangle(
                     vertexIdx[0], vertexIdx[2], vertexIdx[1]
                 )
             );
         }
-    } else if (numPoints == 2) {
+    }
+    else if (numPoints == 2) {
         TEdge star[4];
         double v[4][2];
         int starLen = 0;
@@ -1241,7 +1308,8 @@ void processTetrahedron(
                 star[starLen] = TEdge(p[0], p[i]);
                 v[starLen][0] = w[0];
                 v[starLen][1] = w[i];
-            } else {
+            }
+            else {
                 star[starLen] = TEdge(p[i], p[0]);
                 v[starLen][0] = w[i];
                 v[starLen][1] = w[0];
@@ -1253,7 +1321,8 @@ void processTetrahedron(
                 star[starLen] = TEdge(p[1], p[i]);
                 v[starLen][0] = w[1];
                 v[starLen][1] = w[i];
-            } else {
+            }
+            else {
                 star[starLen] = TEdge(p[i], p[1]);
                 v[starLen][0] = w[i];
                 v[starLen][1] = w[1];
@@ -1285,7 +1354,8 @@ void processTetrahedron(
                 triangulation.vertices.push_back(vertexOnEdge);
                 vertexIdx[i] = (int)(triangulation.vertices.size() - 1);
                 edges[star[i]] = vertexIdx[i];
-            } else {
+            }
+            else {
                 vertexIdx[i] = edges[star[i]];
             }
         }
@@ -1323,7 +1393,7 @@ void processTetrahedron(
             if (
                 (dotprod >= 0. && w[0] >= 0.) ||
                 (dotprod <= 0. && w[0] <= 0.)
-            ) {
+                ) {
                 triangulation.triangles.push_back(
                     Triangulation::Triangle(
                         vertexIdx[0], vertexIdx[1], vertexIdx[3]
@@ -1334,7 +1404,8 @@ void processTetrahedron(
                         vertexIdx[0], vertexIdx[3], vertexIdx[2]
                     )
                 );
-            } else {
+            }
+            else {
                 triangulation.triangles.push_back(
                     Triangulation::Triangle(
                         vertexIdx[0], vertexIdx[3], vertexIdx[1]
@@ -1346,7 +1417,8 @@ void processTetrahedron(
                     )
                 );
             }
-        } else {
+        }
+        else {
             // Select the 1--2 diagonal
             R3Vector n = (t2 - t1).vectorProduct(t3 - t1);
             double dotprod = n * (t0 - t1);
@@ -1354,7 +1426,7 @@ void processTetrahedron(
             if (
                 (dotprod >= 0. && w[0] >= 0.) ||
                 (dotprod <= 0. && w[0] <= 0.)
-            ) {
+                ) {
                 triangulation.triangles.push_back(
                     Triangulation::Triangle(
                         vertexIdx[0], vertexIdx[1], vertexIdx[2]
@@ -1365,7 +1437,8 @@ void processTetrahedron(
                         vertexIdx[1], vertexIdx[3], vertexIdx[2]
                     )
                 );
-            } else {
+            }
+            else {
                 triangulation.triangles.push_back(
                     Triangulation::Triangle(
                         vertexIdx[0], vertexIdx[2], vertexIdx[1]
@@ -1454,7 +1527,7 @@ R3Vector gradientR3(
     const R3Point& p,
     double h
 ) {
-    double h2 = h*2.;
+    double h2 = h * 2.;
     double dx = (*f)(p + R3Vector(h, 0., 0.)) -
         (*f)(p - R3Vector(h, 0., 0.));
     dx /= h2;

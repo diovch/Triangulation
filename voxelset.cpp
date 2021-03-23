@@ -189,7 +189,7 @@ bool VoxelSet::faceOpen(const Voxel& v, int face) const {
     );
 }
 
-void computeTriangulationOfVoxelSet(
+std::map<int, std::set<int>> computeTriangulationOfVoxelSet(
     Triangulation& triangulation,
     const VoxelSet& voxelSet,
     const R3Point& origin,
@@ -228,7 +228,8 @@ void computeTriangulationOfVoxelSet(
     //       (2*slice + s0, 2*x + s1, 2*y + s2), where
     //                                           si = +-1
     std::map<Voxel, int> vertexIndices;
-
+    std::map<int, std::set<int>> neighbours;
+    std::vector<int> ind;
     for (int slice = sliceStart; slice <= sliceFinish; ++slice) {
         for (int iy = iymin; iy <= iymax; ++iy) {
             for (int ix = ixmin; ix <= ixmax; ++ix) {
@@ -452,11 +453,19 @@ void computeTriangulationOfVoxelSet(
                             indices[0], indices[1], indices[5]
                         )
                     );
+                    ind = { indices[0], indices[1], indices[5] };
+                    FillNeighbours(neighbours, ind);
+                    ind.clear();
+
                     triangulation.triangles.push_back(
                         Triangulation::Triangle(
                             indices[0], indices[5], indices[4]
                         )
                     );
+                    ind = { indices[0], indices[5], indices[4] };
+                    FillNeighbours(neighbours, ind);
+                    ind.clear();
+                    
                 } // end if (... FRONT_FACE
 
                 // Back face
@@ -539,11 +548,18 @@ void computeTriangulationOfVoxelSet(
                             indices[2], indices[3], indices[6]
                         )
                     );
+                    ind = { indices[2], indices[3], indices[6] };
+                    FillNeighbours(neighbours, ind);
+                    ind.clear();
+
                     triangulation.triangles.push_back(
                         Triangulation::Triangle(
                             indices[6], indices[3], indices[7]
                         )
                     );
+                    ind = { indices[6], indices[3], indices[7] };
+                    FillNeighbours(neighbours, ind);
+                    ind.clear();
                 } // end if (... BACK_FACE
 
                 // Left face
@@ -617,11 +633,18 @@ void computeTriangulationOfVoxelSet(
                             indices[0], indices[7], indices[3]
                         )
                     );
+                    ind = { indices[0], indices[7], indices[3] };
+                    FillNeighbours(neighbours, ind);
+                    ind.clear();
+
                     triangulation.triangles.push_back(
                         Triangulation::Triangle(
                             indices[7], indices[0], indices[4]
                         )
                     );
+                    ind = { indices[7], indices[0], indices[4] };
+                    FillNeighbours(neighbours, ind);
+                    ind.clear();
                 } // end if (... LEFT_FACE
 
                 // Right face
@@ -693,11 +716,18 @@ void computeTriangulationOfVoxelSet(
                             indices[1], indices[2], indices[6]
                         )
                     );
+                    ind = { indices[1], indices[2], indices[6] };
+                    FillNeighbours(neighbours, ind);
+                    ind.clear();
+
                     triangulation.triangles.push_back(
                         Triangulation::Triangle(
                             indices[6], indices[5], indices[1]
                         )
                     );
+                    ind = { indices[6], indices[5], indices[1] };
+                    FillNeighbours(neighbours, ind);
+                    ind.clear();
                 } // end if (... RIGHT_FACE
 
                 // Bottom face
@@ -767,11 +797,18 @@ void computeTriangulationOfVoxelSet(
                             indices[0], indices[2], indices[1]
                         )
                     );
+                    ind = { indices[0], indices[2], indices[1] };
+                    FillNeighbours(neighbours, ind);
+                    ind.clear();
+
                     triangulation.triangles.push_back(
                         Triangulation::Triangle(
                             indices[0], indices[3], indices[2]
                         )
                     );
+                    ind = { indices[0], indices[3], indices[2] };
+                    FillNeighbours(neighbours, ind);
+                    ind.clear();
                 } // end if (... BOTTOM_FACE
 
                 // Top face
@@ -849,17 +886,33 @@ void computeTriangulationOfVoxelSet(
                             indices[4], indices[5], indices[6]
                         )
                     );
+                    ind = { indices[4], indices[5], indices[6] };
+                    FillNeighbours(neighbours, ind);
+                    ind.clear();
+
                     triangulation.triangles.push_back(
                         Triangulation::Triangle(
                             indices[4], indices[6], indices[7]
                         )
                     );
+                    ind = { indices[4], indices[6], indices[7] };
+                    FillNeighbours(neighbours, ind);
+                    ind.clear();
                 } // end if (... BOTTOM_FACE
             } // end for (ix...
         } // end for (iy...
     } // end for (slice...
 
+    return neighbours;
+}
 
+void FillNeighbours(std::map<int, std::set<int>>& neighbours, std::vector<int>& indicies)
+{
+    for (int i = 0; i < indicies.size(); ++i)
+    {
+        neighbours[indicies[i]].insert(indicies[(i + 1) % 3]);
+        neighbours[indicies[i]].insert(indicies[(i + 2) % 3]);
+    }
 }
 
 void computeTriangulationOfVoxelSet_MY(
