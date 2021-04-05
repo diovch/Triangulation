@@ -73,7 +73,7 @@ public:
     }
 
     // Enumeration of voxel faces
-    enum {
+    enum Face{
         FACE_LEFT = 0,
         FACE_RIGHT = 1,
         FACE_FRONT = 2,
@@ -293,7 +293,8 @@ double detectVoxelSetFromCta(
     VoxelSet& voxelSet
 );
 
-std::map<int, std::set<int>> computeTriangulationOfVoxelSet(
+void computeTriangulationOfVoxelSet(
+    std::map<int, std::set<int>>& neighbours,
     Triangulation& triangulation,
     const VoxelSet& voxelSet,
     const R3Graph::R3Point& origin,
@@ -322,5 +323,33 @@ inline R3Graph::R3Point voxel3DCoord(
         origin.z + voxel.slice * dz + dz / 2.
     );
 }
+
+void BoxBorders(const VoxelBox&, const VoxelSet&, int&, int&, int&, int&, int&, int&);
+
+void InitializeNeighboursCentres(const Voxel& cube, 
+    const R3Graph::R3Point& origin, double dx, double dy,
+    double dz, R3Graph::R3Point& cubeCenter,
+    R3Graph::R3Point& bottomCenter, R3Graph::R3Point& topCenter,
+    R3Graph::R3Point& leftCenter, R3Graph::R3Point& rightCenter,
+    R3Graph::R3Point& frontCenter, R3Graph::R3Point& backCenter);
+
+void InitializeCubeVerticies(R3Graph::R3Point cubeVertices[8],
+    R3Graph::R3Point& cubeCenter, R3Graph::R3Point& bottomCenter, 
+    R3Graph::R3Point& topCenter, R3Graph::R3Point& leftCenter, 
+    R3Graph::R3Point& rightCenter, R3Graph::R3Point& frontCenter, 
+    R3Graph::R3Point& backCenter);
+
+void InitializeExtendedVoxels(Voxel extendedVoxels[8], const Voxel& cube);
+
+void FaceTriangulation(const VoxelSet& voxelSet, const Voxel& cube, const Voxel::Face& face,
+    std::map<Voxel, int>& vertexIndices, Voxel extendedVoxels[8], Triangulation& triangulation,
+    int indices[8], R3Graph::R3Point cubeVertices[8], std::map<int, std::set<int>>& VerxteNeighbours);
+
+void InitializeVertexNumbers(const Voxel::Face& face, int& i, int& j, int& k, int& l);
+
+void InitializeNormal(const Voxel::Face& face, R3Graph::R3Vector& Normal);
+
+void AddVertex(std::map<Voxel, int>& vertexIndices, Voxel extendedVoxels[8], Triangulation& triangulation, 
+    R3Graph::R3Point cubeVertices[8], int indices[8], const int i);
 
 #endif
