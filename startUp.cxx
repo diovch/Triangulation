@@ -7,6 +7,7 @@
 #include "R3Graph.h"
 #include "Taubin.h"
 #include "Segmentation.h"
+#include "STL.h"
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -108,7 +109,7 @@ int main(int argc, char* argv[])
 		voxelSet);
 	
 	Triangulation triangulation;
-	std::map<int, std::set<int>> neighbours;
+	std::map<int, std::set<int>> VerxteNeighbours;
 	
 	if (0)
 		computeTriangulationOfVoxelSet_MY(
@@ -120,22 +121,22 @@ int main(int argc, char* argv[])
 			x_sc, y_sc, z_sc
 		);
 	else
-		neighbours = 
 		computeTriangulationOfVoxelSet(
+			VerxteNeighbours,
 			triangulation,
 			voxelSet,
 			{ 0,0,0 },
 			x_sc, y_sc, z_sc
 		);
-
-	//Segmentation(triangulation, neighbours);
-
-	if (1)
-		Taubin(triangulation, neighbours, 0.33, -0.331, 15);
-	else
-		triangulation.taubinSmoothing(1, 0.33, 0.331, false);
 	
-		
+	
+
+	if (0)
+		Taubin(triangulation, VerxteNeighbours, 0.33, -0.331, 15);
+	//else
+	//	triangulation.taubinSmoothing(1, 0.33, 0.331, false);
+	
+	//std::vector<std::set<Triangulation::Triangle>> s = Segmentation(triangulation, VerxteNeighbours);
 
 	std::ofstream out;
 	std::string FileName = "C:\\Users\\owchi\\source\\repos\\TEST\\bin\\IsoSurface.stl";
@@ -175,29 +176,3 @@ Voxel SearchSeed(short* pointer, int threshold, VoxelBox& voxelBox) {
 	return seed;
 }
 
-void WriteStlFile(const Triangulation& triangulation, std::ofstream& out) 
-{
-	out << "solid iso" << std::endl;
-
-	for (int i = 0; i < triangulation.triangles.size(); ++i) {
-		out << "    " << "facet normal ";
-
-		Triangulation::Triangle t = triangulation.triangles.at(i);
-
-		R3Graph::R3Point p0 = triangulation.vertices.at(t.indices[0]).point;
-		R3Graph::R3Point p1 = triangulation.vertices.at(t.indices[1]).point;
-		R3Graph::R3Point p2 = triangulation.vertices.at(t.indices[2]).point;
-		
-		out << t.Normal.x << " " << t.Normal.y << " " << t.Normal.z << std::endl;
-		out << "    " << "outer loop" << std::endl;
-		
-		out << "    " << "vertex " << p0.x << " " << p0.y << " " << p0.z << std::endl;
-		out << "    " << "vertex " << p1.x << " " << p1.y << " " << p1.z << std::endl;
-		out << "    " << "vertex " << p2.x << " " << p2.y << " " << p2.z << std::endl;
-
-		out << "    " << "endloop" << std::endl;
-		out << "    " << "endfacet" << std::endl;
-	}
-
-	out << "endsolid iso";
-}
