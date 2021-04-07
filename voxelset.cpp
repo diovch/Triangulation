@@ -230,12 +230,12 @@ std::map<int, std::set<int>> computeTriangulationOfVoxelSet(
     std::map<Voxel, int> vertexIndices;
     std::map<int, std::set<int>> neighbours;
     std::vector<int> ind;
-    for (int slice = sliceStart; slice <= sliceFinish; ++slice) {
-        for (int iy = iymin; iy <= iymax; ++iy) {
-            for (int ix = ixmin; ix <= ixmax; ++ix) {
-    //for (int slice = sliceFinish / 2; slice <= sliceFinish * 3 / 4; ++slice) {
-    //    for (int iy = iymax / 2; iy <= iymax * 3 / 4; ++iy) {
-    //        for (int ix = ixmax / 2; ix <= ixmax * 3 / 4; ++ix) {
+    //for (int slice = sliceStart; slice <= sliceFinish; ++slice) {
+    //    for (int iy = iymin; iy <= iymax; ++iy) {
+    //        for (int ix = ixmin; ix <= ixmax; ++ix) {
+    for (int slice = sliceFinish / 2; slice <= sliceFinish * 3 / 4; ++slice) {
+        for (int iy = iymax / 2; iy <= iymax * 3 / 4; ++iy) {
+            for (int ix = ixmax / 2; ix <= ixmax * 3 / 4; ++ix) {
                 if (voxelSet.voxelAt(slice, ix, iy) == 0)
                     continue;
 

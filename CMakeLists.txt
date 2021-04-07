@@ -21,8 +21,7 @@ add_library(IsoLib STATIC
 			skala.h skala.cpp
 			BinHeap.h BinHeap.cpp
 			Taubin.h Taubin.cpp
-			Segmentation.h Segmentation.cpp
-			STL.h STL.cpp)
+			Segmentation.h Segmentation.cpp)
 
 add_executable(IsoTest startUp.cxx)
 

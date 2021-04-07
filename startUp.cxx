@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
 			x_sc, y_sc, z_sc
 		);
 
-	//Segmentation(triangulation, neighbours);
+	Segmentation(triangulation, neighbours);
 
 	if (1)
 		Taubin(triangulation, neighbours, 0.33, -0.331, 15);
