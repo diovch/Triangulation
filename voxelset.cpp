@@ -209,15 +209,14 @@ void computeTriangulationOfVoxelSet(
     //                                           si = +-1
     std::map<Voxel, int> vertexIndices;
     std::vector<int> ind;
-    //for (int slice = sliceStart; slice <= sliceFinish; ++slice) {
-    //    for (int iy = iymin; iy <= iymax; ++iy) {
-    //        for (int ix = ixmin; ix <= ixmax; ++ix) {
-    for (int slice = sliceFinish / 2; slice <= sliceFinish * 3 / 4; ++slice) {
-        for (int iy = iymax / 2; iy <= iymax * 3 / 4; ++iy) {
-            for (int ix = ixmax / 2; ix <= ixmax * 3 / 4; ++ix) {
+    /*for (int slice = sliceStart; slice <= sliceFinish; ++slice) {
+        for (int iy = iymin; iy <= iymax; ++iy) {
+            for (int ix = ixmin; ix <= ixmax; ++ix) {*/
+    for (int slice = sliceFinish / 4; slice <= sliceFinish * 3 / 4; ++slice) {
+        for (int iy = iymax / 4; iy <= iymax * 3 / 4; ++iy) {
+            for (int ix = ixmax / 4; ix <= ixmax * 3 / 4; ++ix) {
                 if (voxelSet.voxelAt(slice, ix, iy) == 0)
                     continue;
-
 
                 // Enumeration of cube vertices and faces:
                 //        7         6
@@ -235,7 +234,6 @@ void computeTriangulationOfVoxelSet(
 
                 const Voxel cube(slice, ix, iy);
                 R3Point cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter;
-
                 InitializeNeighboursCentres(cube, origin, dx, dy,dz,
                     cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter);
 
@@ -457,13 +455,12 @@ void FaceTriangulation(const VoxelSet& voxelSet, const Voxel& cube, const Voxel:
             indices[l] >= 0
         );
 
+        // triangle verticies in clockwise direction
         triangulation.triangles.push_back(
             Triangulation::Triangle(
                 indices[i], indices[j], indices[k]
             )
         );
-
-        
         InitializeNormal(face, triangulation.triangles.back().Normal);      
         ind = { indices[i], indices[j], indices[k] };
         FillNeighbours(VerxteNeighbours, ind);
@@ -476,7 +473,6 @@ void FaceTriangulation(const VoxelSet& voxelSet, const Voxel& cube, const Voxel:
         InitializeNormal(face, triangulation.triangles.back().Normal);
         ind = { indices[k], indices[l], indices[i] };
         FillNeighbours(VerxteNeighbours, ind);
-
     }
 }
 
@@ -552,37 +548,12 @@ void computeTriangulationOfVoxelSet_MY(
     const VoxelSet& voxelSet,
     const R3Point& origin,
     double dx, double dy, double dz
-) {
+) { // TODO: Refactor this method
     const VoxelBox& voxelBox = voxelSet.voxelBox;
-    int sliceStart = voxelBox.origin.slice - 2;
-    if (sliceStart < 0)
-        sliceStart = 1;
-
-    int sliceFinish = voxelBox.origin.slice + voxelBox.height + 1;
-    if (sliceFinish >= voxelSet.maxSlices)
-        sliceFinish = voxelSet.maxSlices - 1;
-
-    int ixmin = voxelBox.origin.point.x - 2;
-    if (ixmin < 0)
-        ixmin = 1;
-
-    int ixmax = voxelBox.origin.point.x + voxelBox.width + 1;
-    if (ixmax >= voxelSet.xMax)
-        ixmax = voxelSet.xMax - 1;
-
-    int iymin = voxelBox.origin.point.y - 2;
-    if (iymin < 0)
-        iymin = 1;
-
-    int iymax = voxelBox.origin.point.y + voxelBox.depth + 1;
-    if (iymax >= voxelSet.yMax)
-        iymax = voxelSet.yMax - 1;
+    int sliceStart = 0, sliceFinish = 0, ixmin = 0, ixmax = 0, iymin = 0, iymax = 0;
+    BoxBorders(voxelBox, voxelSet, sliceStart, sliceFinish, ixmin, ixmax, iymin, iymax);
 
     triangulation.clear();
-
-    //Voxel ImageCentralVoxel(voxelSet.maxSlices / 2, voxelSet.xMax / 2, voxelSet.yMax / 2);
-    //R3Point ImageCenter = voxel3DCoord(ImageCentralVoxel, origin, dx, dy, dz); 
-    //triangulation.imageCenter = ImageCenter;
 
     //for (int slice = sliceStart; slice <= sliceFinish; ++slice) {
     //    for (int iy = iymin; iy <= iymax; ++iy) {
@@ -592,8 +563,6 @@ void computeTriangulationOfVoxelSet_MY(
             for (int ix = ixmax/2; ix <= ixmax * 3 / 4; ++ix) {
                 if (voxelSet.voxelAt(slice, ix, iy) == 0) // if(voxel is out of ROI)
                     continue;
-                //if (triangulation.triangles.size() > 2'000'000)
-                //    return;
                 // Enumeration of cube vertices and faces:
                 //        7         6
                 //       +---------+          z
@@ -608,96 +577,17 @@ void computeTriangulationOfVoxelSet_MY(
                 //    +---------+           ------> x
                 //   0  bottom   1
 
-                R3Point cubeVertices[8];
-
                 Voxel cube(slice, ix, iy);
-                R3Point cubeCenter = voxel3DCoord(
-                    cube, origin, dx, dy, dz
-                );
+                R3Point cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter;
+                InitializeNeighboursCentres(cube, origin, dx, dy, dz,
+                    cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter);
 
-                // Bottom
-                Voxel BottomVoxel =
-                    Voxel(cube.slice - 1, cube.point.x, cube.point.y);
-                R3Point bottomCenter = voxel3DCoord(
-                    BottomVoxel,
-                    origin, dx, dy, dz
-                );
+                Voxel BottomVoxel, TopVoxel, LeftVoxel, RightVoxel, FrontVoxel, BackVoxel;
+                InitializeVoxels(cube, BottomVoxel, TopVoxel, LeftVoxel, RightVoxel, FrontVoxel, BackVoxel);
 
-                // Top
-                Voxel TopVoxel =
-                    Voxel(cube.slice + 1, cube.point.x, cube.point.y);
-                R3Point topCenter = voxel3DCoord(
-                    TopVoxel,
-                    origin, dx, dy, dz
-                );
-
-                // Left
-                Voxel LeftVoxel =
-                    Voxel(cube.slice, cube.point.x - 1, cube.point.y);
-                R3Point leftCenter = voxel3DCoord(
-                    LeftVoxel,
-                    origin, dx, dy, dz
-                );
-
-                // Right
-                Voxel RightVoxel =
-                    Voxel(cube.slice, cube.point.x + 1, cube.point.y);
-                R3Point rightCenter = voxel3DCoord(
-                    RightVoxel,
-                    origin, dx, dy, dz
-                );
-
-                // Front
-                Voxel FrontVoxel =
-                    Voxel(cube.slice, cube.point.x, cube.point.y - 1);
-                R3Point frontCenter = voxel3DCoord(
-                    FrontVoxel,
-                    origin, dx, dy, dz
-                );
-
-                // Back
-                Voxel BackVoxel =
-                    Voxel(cube.slice, cube.point.x, cube.point.y + 1);
-                R3Point backCenter = voxel3DCoord(
-                    BackVoxel,
-                    origin, dx, dy, dz
-                );
-
-
-
-                cubeVertices[0] = cubeCenter +
-                    (frontCenter - cubeCenter) * 0.5 +
-                    (leftCenter - cubeCenter) * 0.5 +
-                    (bottomCenter - cubeCenter) * 0.5;
-                cubeVertices[1] = cubeCenter +
-                    (frontCenter - cubeCenter) * 0.5 +
-                    (rightCenter - cubeCenter) * 0.5 +
-                    (bottomCenter - cubeCenter) * 0.5;
-                cubeVertices[2] = cubeCenter +
-                    (backCenter - cubeCenter) * 0.5 +
-                    (rightCenter - cubeCenter) * 0.5 +
-                    (bottomCenter - cubeCenter) * 0.5;
-                cubeVertices[3] = cubeCenter +
-                    (backCenter - cubeCenter) * 0.5 +
-                    (leftCenter - cubeCenter) * 0.5 +
-                    (bottomCenter - cubeCenter) * 0.5;
-
-                cubeVertices[4] = cubeCenter +
-                    (frontCenter - cubeCenter) * 0.5 +
-                    (leftCenter - cubeCenter) * 0.5 +
-                    (topCenter - cubeCenter) * 0.5;
-                cubeVertices[5] = cubeCenter +
-                    (frontCenter - cubeCenter) * 0.5 +
-                    (rightCenter - cubeCenter) * 0.5 +
-                    (topCenter - cubeCenter) * 0.5;
-                cubeVertices[6] = cubeCenter +
-                    (backCenter - cubeCenter) * 0.5 +
-                    (rightCenter - cubeCenter) * 0.5 +
-                    (topCenter - cubeCenter) * 0.5;
-                cubeVertices[7] = cubeCenter +
-                    (backCenter - cubeCenter) * 0.5 +
-                    (leftCenter - cubeCenter) * 0.5 +
-                    (topCenter - cubeCenter) * 0.5;
+                R3Point cubeVertices[8];
+                InitializeCubeVerticies(cubeVertices,
+                    cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter);
 
                 R3Vector cubeGradient = cube.VoxelGradient(pointer, dx, dy, dz);// HU per mm
                 short cubeDensity = cube.VoxelDensity(pointer);
@@ -716,7 +606,7 @@ void computeTriangulationOfVoxelSet_MY(
                 for (int i = 0; i < 8; ++i)
                     CubeVertexPairs[i] = { cubeVertices[i], ThresholdFunction[i] };
 
-
+                // S = {Voxel s: s имеет соседа - воксель границы}
 
                 // Front face
                 // if (front_neihbour is out of ROI or out of maxVolume)
@@ -895,6 +785,16 @@ void computeTriangulationOfVoxelSet_MY(
             } // end for (ix...
         } // end for (iy...
     } // end for (slice...
-    //triangulation.orientate();
+}
+
+void InitializeVoxels(Voxel& cube, Voxel& BottomVoxel, Voxel& TopVoxel, Voxel& LeftVoxel, Voxel& RightVoxel,
+    Voxel& FrontVoxel, Voxel& BackVoxel)
+{
+    BottomVoxel = Voxel(cube.slice - 1, cube.point.x, cube.point.y);
+    TopVoxel = Voxel(cube.slice + 1, cube.point.x, cube.point.y);
+    LeftVoxel = Voxel(cube.slice, cube.point.x - 1, cube.point.y);
+    RightVoxel = Voxel(cube.slice, cube.point.x + 1, cube.point.y);
+    FrontVoxel = Voxel(cube.slice, cube.point.x, cube.point.y - 1);
+    BackVoxel = Voxel(cube.slice, cube.point.x, cube.point.y + 1);
 }
 

@@ -352,4 +352,7 @@ void InitializeNormal(const Voxel::Face& face, R3Graph::R3Vector& Normal);
 void AddVertex(std::map<Voxel, int>& vertexIndices, Voxel extendedVoxels[8], Triangulation& triangulation, 
     R3Graph::R3Point cubeVertices[8], int indices[8], const int i);
 
+void InitializeVoxels(Voxel& cube, Voxel& BottomVoxel, Voxel& TopVoxel, Voxel& LeftVoxel, Voxel& RightVoxel,
+    Voxel& FrontVoxel, Voxel& BackVoxel);
+
 #endif

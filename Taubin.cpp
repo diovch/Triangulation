@@ -35,9 +35,9 @@ void NormalsUpdate(Triangulation& triangulation)
 	{
 		Triangulation::Triangle& t = triangulation.triangles.at(i);
 
-		R3Graph::R3Point p0 = triangulation.vertices.at(t.indices[0]).point;
-		R3Graph::R3Point p1 = triangulation.vertices.at(t.indices[1]).point;
-		R3Graph::R3Point p2 = triangulation.vertices.at(t.indices[2]).point;
+		R3Graph::R3Point& p0 = triangulation.vertices.at(t.indices[0]).point;
+		R3Graph::R3Point& p1 = triangulation.vertices.at(t.indices[1]).point;
+		R3Graph::R3Point& p2 = triangulation.vertices.at(t.indices[2]).point;
 
 		R3Graph::R3Vector v1 = p1 - p0; v1.normalize();
 		R3Graph::R3Vector v2 = p2 - p0; v2.normalize();
