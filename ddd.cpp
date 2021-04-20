@@ -127,3 +127,119 @@ double detectVoxelSetFromCta(
     voxelSet.detected3D = true;
     return num;
 }
+
+void FillVoids(VoxelSet& voxelSet)
+{// TODO Debug FillVoids()
+    int sliceStart = 0, sliceFinish = 0, ixmin = 0, ixmax = 0, iymin = 0, iymax = 0;
+    BoxBorders(voxelSet, sliceStart, sliceFinish, ixmin, ixmax, iymin, iymax);
+
+    VoxelBox& voxelBox = voxelSet.voxelBox;
+    int NumVoxels = voxelBox.depth * voxelBox.width * voxelBox.height;
+    int NumOutsideVoids = 0;
+
+    std::set<Voxel> OutsideVoids;
+    std::deque<Voxel> QueueOfNeighbours;
+
+    for (int slice = sliceStart; slice <= sliceFinish; ++slice)
+    {
+        Voxel seed = SearchSliceSeed(voxelSet, slice);
+        QueueOfNeighbours.push_back(seed);
+        OutsideVoids.insert(seed);
+
+        while (!QueueOfNeighbours.empty())
+        {
+            Voxel t = QueueOfNeighbours.front(); QueueOfNeighbours.pop_front();
+            for (int i = 0; i < 4; ++i) {
+                Voxel n = t + NEIGHBOURS6[i]; // at slice
+                if (OutsideVoids.count(n) == 1 ||
+                    n.slice < sliceStart || n.slice > sliceFinish ||
+                    n.point.x < ixmin || n.point.x > ixmax ||
+                    n.point.y < iymin || n.point.y > iymax
+                    )
+                    continue;
+
+                if (voxelSet.voxelAt(n) == 0)
+                {
+                    QueueOfNeighbours.push_back(n);
+                    OutsideVoids.insert(n);
+                    NumOutsideVoids++;
+                }
+            }
+        }
+
+        for (int iy = iymin; iy <= iymax; ++iy)
+        {
+            for (int ix = ixmin; ix <= ixmax; ++ix)
+            {
+                Voxel current(slice, ix, iy);
+                if (voxelSet.voxelAt(current) == 0 && OutsideVoids.count(current) == 0)
+                {
+                    voxelSet.addVoxel(current, ROI_POSITIVE);
+                }
+            }
+        }
+        OutsideVoids.clear();
+    }
+
+    (int)voxelSet.numVoxels + NumOutsideVoids <= NumVoxels;
+}
+
+Voxel SearchSeed(VoxelSet& voxelSet)
+{
+    int sliceStart = 0, sliceFinish = 0, ixmin = 0, ixmax = 0, iymin = 0, iymax = 0;
+    BoxBorders(voxelSet, sliceStart, sliceFinish, ixmin, ixmax, iymin, iymax);
+
+    for (int slice = sliceStart; slice <= sliceFinish; ++slice)
+    {
+        for (int iy = iymin; iy <= iymax; ++iy)
+        {
+            for (int ix = ixmin; ix <= ixmax; ++ix)
+            {
+                Voxel seed(slice, ix, iy);
+                if (voxelSet.voxelAt(seed) == 0)
+                {
+                    return seed;
+                }
+            }
+        }
+    }
+    return {};
+}
+
+int CountRoiVoxels(VoxelSet& voxelSet)
+{
+    int num = 0;
+
+    int sliceStart = 0, sliceFinish = 0, ixmin = 0, ixmax = 0, iymin = 0, iymax = 0;
+    BoxBorders(voxelSet, sliceStart, sliceFinish, ixmin, ixmax, iymin, iymax);
+
+    for (int slice = sliceStart; slice <= sliceFinish; ++slice)
+        for (int iy = iymin; iy <= iymax; ++iy)
+            for (int ix = ixmin; ix <= ixmax; ++ix)
+            {
+                Voxel seed(slice, ix, iy);
+                if (voxelSet.voxelAt(seed) != 0)
+                    ++num;
+            }
+    return num;
+}
+
+Voxel SearchSliceSeed(const VoxelSet & voxelSet, int slice)
+{
+    int sliceStart = 0, sliceFinish = 0, ixmin = 0, ixmax = 0, iymin = 0, iymax = 0;
+    BoxBorders(voxelSet, sliceStart, sliceFinish, ixmin, ixmax, iymin, iymax);
+
+    
+    for (int iy = iymin; iy <= iymax; ++iy)
+    {
+        for (int ix = ixmin; ix <= ixmax; ++ix)
+        {
+            Voxel seed(slice, ix, iy);
+            if (voxelSet.voxelAt(seed) == 0)
+            {
+                return seed;
+            }
+        }
+    }
+    return {};
+}
