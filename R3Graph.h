@@ -450,7 +450,7 @@ public:
     }
 
     R3Point PointOnEdge() 
-    {
+    {// TODO: introduce eps
         if (A.second < 0.)
             SwapVerticies();
 
@@ -469,18 +469,18 @@ public:
     }
 };
 
-class Tetrahedron 
+class DensityTetrahedron 
 {
 public:
     Edge edges[6];
     R3Vector Outward;
 
-    Tetrahedron() {
+    DensityTetrahedron() {
         for (int i = 0; i < 6; ++i)
             edges[i] = Edge();
     }
 
-    Tetrahedron(const R3Point& CubeCenter, double ThrFunCubeCenter,
+    DensityTetrahedron(const R3Point& CubeCenter, double ThrFunCubeCenter,
         const R3Point& NeghbourCenter, double ThrFunNeghbourCenter,
         const R3Point& CubeVertex1, double ThrFunCubeVertex1,
         const R3Point& CubeVertex2, double ThrFunCubeVertex2)
@@ -508,7 +508,7 @@ public:
             CubeVertex2, ThrFunCubeVertex2);
     }
 
-    Tetrahedron(const std::pair<R3Point,double>& CubeCenterPair,
+    DensityTetrahedron(const std::pair<R3Point,double>& CubeCenterPair,
         const std::pair<R3Point, double>& NeghbourCenterPair,
         const std::pair<R3Point, double>& CubeVertex1Pair,
         const std::pair<R3Point, double>& CubeVertex2Pair)
@@ -528,58 +528,6 @@ public:
         edges[5] = Edge(CubeVertex1Pair, CubeVertex2Pair);
     }
 
-
-    //void TriangulationOfTetrahedron(Triangulation& triangulation, std::map<Edge, int>& VertexOnEdgeIndex) const
-    //{
-    //    std::vector<int> TriangleIndices;
-    //    TriangleIndices.clear();
-
-    //    for (int i = 0; i < 6; ++i) {
-    //        double thrfun1 = edges[i].A.second;
-    //        double thrfun2 = edges[i].B.second;
-    //        if (thrfun1 * thrfun1 < 0) {
-    //            // if edge (and so vertex too) has not computed yet
-    //            if (VertexOnEdgeIndex.count(edges[i]) == 0) {
-
-    //                R3Point v = PointOnEdge(edges[i]);
-    //                triangulation.vertices.push_back(v);
-
-    //                int VertexNumber = (int)triangulation.vertices.size() - 1;
-    //                VertexOnEdgeIndex[edges[i]] = VertexNumber;
-    //                TriangleIndices.push_back(VertexOnEdgeIndex[edges[i]]);
-    //            }
-    //            else {
-    //                // vertex has already computed
-    //                TriangleIndices.push_back(VertexOnEdgeIndex[edges[i]]);
-    //            }
-
-    //        }
-    //    }
-    //    // Add triangles
-    //    if (TriangleIndices.size() == 3) {
-    //        triangulation.triangles.push_back(
-    //            Triangulation::Triangle(
-    //                TriangleIndices[0],
-    //                TriangleIndices[1],
-    //                TriangleIndices[2])
-    //        );
-    //    }
-    //    else if (TriangleIndices.size() == 4)
-    //    {
-    //        triangulation.triangles.push_back(
-    //            Triangulation::Triangle(
-    //                TriangleIndices[0],
-    //                TriangleIndices[1],
-    //                TriangleIndices[2])
-    //        );
-    //        triangulation.triangles.push_back(
-    //            Triangulation::Triangle(
-    //                TriangleIndices[1],
-    //                TriangleIndices[2],
-    //                TriangleIndices[3])
-    //        );
-    //    }
-    //}
 };
 
 } // end of namespace R3Graph
