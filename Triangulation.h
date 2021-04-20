@@ -428,7 +428,7 @@ public:
 
     bool save(const char *path) const;
     bool load(const char *path);
-    void TriangulationOfTetrahedron(R3Graph::Tetrahedron& tetrahedron);
+    void TriangulationOfTetrahedron(R3Graph::DensityTetrahedron& tetrahedron);
 
     void computeVertexRing(
         int vertexIdx, VertexRing& vertexRing

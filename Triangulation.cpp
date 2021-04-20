@@ -1840,7 +1840,7 @@ R3Vector Triangulation::uniformLaplace(int vertexIdx) const {
     return centroid - t;
 }
 // TODO : Implement Skala mesh at surface voxels
-void Triangulation::TriangulationOfTetrahedron(R3Graph::Tetrahedron& tetrahedron)
+void Triangulation::TriangulationOfTetrahedron(R3Graph::DensityTetrahedron& tetrahedron)
 {
     std::vector<int> TriangleIndices;
     TriangleIndices.clear();
