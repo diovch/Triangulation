@@ -4,6 +4,7 @@
 #include "Triangulation.h"
 
 #include <map>
+#include <deque>
 
 using namespace R3Graph;
 
@@ -196,9 +197,8 @@ void computeTriangulationOfVoxelSet(
     const R3Point& origin,
     double dx, double dy, double dz
 ) {
-    const VoxelBox& voxelBox = voxelSet.voxelBox;
     int sliceStart = 0, sliceFinish = 0, ixmin = 0, ixmax = 0, iymin = 0, iymax = 0;
-    BoxBorders(voxelBox, voxelSet, sliceStart, sliceFinish, ixmin, ixmax, iymin, iymax);
+    BoxBorders(voxelSet, sliceStart, sliceFinish, ixmin, ixmax, iymin, iymax);
 
     triangulation.clear();
     
@@ -209,12 +209,12 @@ void computeTriangulationOfVoxelSet(
     //                                           si = +-1
     std::map<Voxel, int> vertexIndices;
     std::vector<int> ind;
-    /*for (int slice = sliceStart; slice <= sliceFinish; ++slice) {
+    for (int slice = sliceStart; slice <= sliceFinish; ++slice) {
         for (int iy = iymin; iy <= iymax; ++iy) {
-            for (int ix = ixmin; ix <= ixmax; ++ix) {*/
-    for (int slice = sliceFinish / 4; slice <= sliceFinish * 3 / 4; ++slice) {
-        for (int iy = iymax / 4; iy <= iymax * 3 / 4; ++iy) {
-            for (int ix = ixmax / 4; ix <= ixmax * 3 / 4; ++ix) {
+            for (int ix = ixmin; ix <= ixmax; ++ix) {
+    //for (int slice = sliceFinish / 4; slice <= sliceFinish * 3 / 4; ++slice) {
+    //    for (int iy = iymax / 4; iy <= iymax * 3 / 4; ++iy) {
+    //        for (int ix = ixmax / 4; ix <= ixmax * 3 / 4; ++ix) {
                 if (voxelSet.voxelAt(slice, ix, iy) == 0)
                     continue;
 
@@ -287,9 +287,10 @@ void FillNeighbours(std::map<int, std::set<int>>& neighbours, std::vector<int>& 
     indicies.clear();
 }
 
-void BoxBorders(const VoxelBox& voxelBox, const VoxelSet& voxelSet,
+void BoxBorders(const VoxelSet& voxelSet,
     int& sliceStart, int& sliceFinish, int& ixmin, int& ixmax, int& iymin, int& iymax)
 {
+    const VoxelBox& voxelBox = voxelSet.voxelBox;
     sliceStart = voxelBox.origin.slice - 2;
     if (sliceStart < 0)
         sliceStart = 0;
@@ -523,22 +524,22 @@ void InitializeVertexNumbers(const Voxel::Face& face, int& i, int& j, int& k, in
 void InitializeNormal(const Voxel::Face& face, R3Graph::R3Vector& Normal)
 {
     if (face == Voxel::Face::FACE_FRONT)
-        Normal = { 0.,  0., -1. };
+        Normal = { 0., -1., 0. };
  
     else if (face == Voxel::Face::FACE_BACK)
-        Normal = { 0.,  0., 1. };
+        Normal = { 0., 1., 0. };
     
     else if (face == Voxel::Face::FACE_LEFT)
-        Normal = { 0.,  -1., 0. };
+        Normal = { -1., 0., 0. };
     
     else if (face == Voxel::Face::FACE_RIGHT)
-        Normal = { 0.,  1., 0. };
+        Normal = { 1., 0., 0. };
     
     else if (face == Voxel::Face::FACE_BOTTOM)
-        Normal = { -1.,  0., 0. };
+        Normal = { 0., 0., -1. };
     
     else if (face == Voxel::Face::FACE_TOP)
-        Normal = { 1.,  0., 0. };
+        Normal = { 0., 0., 1. };
 }
 
 void computeTriangulationOfVoxelSet_MY(
@@ -548,246 +549,161 @@ void computeTriangulationOfVoxelSet_MY(
     const VoxelSet& voxelSet,
     const R3Point& origin,
     double dx, double dy, double dz
-) { // TODO: Refactor this method
-    const VoxelBox& voxelBox = voxelSet.voxelBox;
+) {
+    //const VoxelBox& voxelBox = voxelSet.voxelBox;
     int sliceStart = 0, sliceFinish = 0, ixmin = 0, ixmax = 0, iymin = 0, iymax = 0;
-    BoxBorders(voxelBox, voxelSet, sliceStart, sliceFinish, ixmin, ixmax, iymin, iymax);
+    BoxBorders(voxelSet, sliceStart, sliceFinish, ixmin, ixmax, iymin, iymax);
 
     triangulation.clear();
 
-    //for (int slice = sliceStart; slice <= sliceFinish; ++slice) {
-    //    for (int iy = iymin; iy <= iymax; ++iy) {
-    //        for (int ix = ixmin; ix <= ixmax; ++ix) {
-    for (int slice = sliceFinish/2; slice <= sliceFinish*3/4; ++slice) {
-        for (int iy = iymax/2; iy <= iymax * 3 / 4; ++iy) {
-            for (int ix = ixmax/2; ix <= ixmax * 3 / 4; ++ix) {
-                if (voxelSet.voxelAt(slice, ix, iy) == 0) // if(voxel is out of ROI)
-                    continue;
-                // Enumeration of cube vertices and faces:
-                //        7         6
-                //       +---------+          z
-                //      /   top   /|        ^
-                //   4 / |       / |        |
-                //    +---------+5 |        |
-                //Left|         |  | Right  |    ^ y
-                //    |  |  back|  |        |   /
-                //    |  + - - -|- +        |  /
-                //    |  3      | /2        | /
-                //    |/  Front |/          |/
-                //    +---------+           ------> x
-                //   0  bottom   1
+    std::set<Voxel> Borderlayer;
+    std::map<Voxel, bool> IsCalculate;
+    BorderLayerFill(voxelSet, Borderlayer);
 
-                Voxel cube(slice, ix, iy);
-                R3Point cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter;
-                InitializeNeighboursCentres(cube, origin, dx, dy, dz,
-                    cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter);
+    for (const auto& cube : Borderlayer)
+    {   
+        if (IsCalculate[cube] == true)
+            continue;
+        // Enumeration of cube vertices and faces:
+        //        7         6
+        //       +---------+          z
+        //      /   top   /|        ^
+        //   4 / |       / |        |
+        //    +---------+5 |        |
+        //Left|         |  | Right  |    ^ y
+        //    |  |  back|  |        |   /
+        //    |  + - - -|- +        |  /
+        //    |  3      | /2        | /
+        //    |/  Front |/          |/
+        //    +---------+           ------> x
+        //   0  bottom   1
 
-                Voxel BottomVoxel, TopVoxel, LeftVoxel, RightVoxel, FrontVoxel, BackVoxel;
-                InitializeVoxels(cube, BottomVoxel, TopVoxel, LeftVoxel, RightVoxel, FrontVoxel, BackVoxel);
+        R3Point cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter;
+        InitializeNeighboursCentres(cube, origin, dx, dy, dz,
+            cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter);
 
-                R3Point cubeVertices[8];
-                InitializeCubeVerticies(cubeVertices,
-                    cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter);
+        R3Point cubeVertices[8];
+        InitializeCubeVerticies(cubeVertices,
+            cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter);
 
-                R3Vector cubeGradient = cube.VoxelGradient(pointer, dx, dy, dz);// HU per mm
-                short cubeDensity = cube.VoxelDensity(pointer);
-                cubeDensity -= threshold; // new level of zero density
+        std::vector<Voxel::Face> faces = { Voxel::FACE_FRONT,
+        Voxel::FACE_BACK, Voxel::FACE_LEFT, Voxel::FACE_RIGHT, Voxel::FACE_BOTTOM, Voxel::FACE_TOP };
+        for (const auto& face : faces)
+            TriangulateBySkala(cube, face, Borderlayer, triangulation, origin, dx, dy, dz, pointer, cubeVertices, threshold);
 
-                // ThresholdFunction(x,y,z) = Density(x,y,z) - threshold
-                // f(x,y,z) = f(x0,y0,z0) + {x-x0, y-y0, z-z0} * grad f
-                double ThresholdFunction[8];
-                for (int i = 0; i < 8; ++i) // for cube vertices
-                    ThresholdFunction[i] = cubeDensity + (cubeVertices[i] - cubeVertices[0]).scalarProduct(cubeGradient);
-                // for cube center
-                double ThresholdFunctionCubeCenter = cubeDensity + (cubeCenter - cubeVertices[0]).scalarProduct(cubeGradient);
-
-                std::pair<R3Point, double> CubeCenterPair(cubeCenter, ThresholdFunctionCubeCenter);
-                std::pair<R3Point, double> CubeVertexPairs[8];
-                for (int i = 0; i < 8; ++i)
-                    CubeVertexPairs[i] = { cubeVertices[i], ThresholdFunction[i] };
-
-                // S = {Voxel s: s имеет соседа - воксель границы}
-
-                // Front face
-                // if (front_neihbour is out of ROI or out of maxVolume)
-                if (voxelSet.faceOpen(cube, Voxel::FACE_FRONT)) {
-
-                    R3Vector FrontVoxelGradient =
-                        FrontVoxel.VoxelGradient(pointer, dx, dy, dz); // HU per mm
-                    short FrontDensity = FrontVoxel.VoxelDensity(pointer);
-                    FrontDensity -= threshold;
-
-                    double ThresholdFunctionFrontCenter = FrontDensity +
-                        (cubeCenter - cubeVertices[0]).scalarProduct(FrontVoxelGradient);
-
-                    // process tetrahedrons with 0, 1, 5, 4, cubeCenter, frontCenter vertecies
-                    std::pair<R3Point, double> FrontCenterPair(frontCenter, ThresholdFunctionFrontCenter);
-
-                    std::pair<R3Point, double> AdjacentCubeVertexPairs[4];
-                    AdjacentCubeVertexPairs[0] = CubeVertexPairs[0];
-                    AdjacentCubeVertexPairs[1] = CubeVertexPairs[1];
-                    AdjacentCubeVertexPairs[2] = CubeVertexPairs[5];
-                    AdjacentCubeVertexPairs[3] = CubeVertexPairs[4];
-
-                    for (int i = 0; i < 4; ++i) {
-                        // cube edges: 0-1, 1-2, 2-3, (!) 3-0 (!)
-                        Tetrahedron CurrentTetrahedron(CubeCenterPair, FrontCenterPair,
-                            AdjacentCubeVertexPairs[i], AdjacentCubeVertexPairs[(i + 1) % 4]);
-                        triangulation.TriangulationOfTetrahedron(CurrentTetrahedron);
-                    }
-                } // end if (... FRONT_FACE
-
-                // Back face
-                // if (back_neihbour is out of ROI or out of maxVolume)
-                if (voxelSet.faceOpen(cube, Voxel::FACE_BACK)) {
-
-                    R3Vector BackVoxelGradient =
-                        BackVoxel.VoxelGradient(pointer, dx, dy, dz); // HU per mm
-                    short BackDensity = BackVoxel.VoxelDensity(pointer);
-                    BackDensity -= threshold;
-
-                    double ThresholdFunctionBackCenter = BackDensity +
-                        (cubeCenter - cubeVertices[0]).scalarProduct(BackVoxelGradient);
-
-                    // process tetrahedrons with 2, 6, 7, 3, cubeCenter, backCenter vertecies
-                    std::pair<R3Point, double> BackCenterPair(backCenter, ThresholdFunctionBackCenter);
-
-                    std::pair<R3Point, double> AdjacentCubeVertexPairs[4];
-                    AdjacentCubeVertexPairs[0] = CubeVertexPairs[2];
-                    AdjacentCubeVertexPairs[1] = CubeVertexPairs[6];
-                    AdjacentCubeVertexPairs[2] = CubeVertexPairs[7];
-                    AdjacentCubeVertexPairs[3] = CubeVertexPairs[3];
-
-                    for (int i = 0; i < 4; ++i) {
-                        Tetrahedron CurrentTetrahedron(CubeCenterPair, BackCenterPair,
-                            AdjacentCubeVertexPairs[i], AdjacentCubeVertexPairs[(i + 1) % 4]);
-                        triangulation.TriangulationOfTetrahedron(CurrentTetrahedron);
-                    }
-
-                } // end if (... BACK_FACE
-
-                // Left face
-                // if (left_neihbour is out of ROI or out of maxVolume)
-                if (voxelSet.faceOpen(cube, Voxel::FACE_LEFT)) {
-
-                    R3Vector LeftVoxelGradient =
-                        LeftVoxel.VoxelGradient(pointer, dx, dy, dz); // HU per mm
-                    short LeftDensity = LeftVoxel.VoxelDensity(pointer);
-                    LeftDensity -= threshold;
-
-                    double ThresholdFunctionLeftCenter = LeftDensity +
-                        (cubeCenter - cubeVertices[0]).scalarProduct(LeftVoxelGradient);
-
-                    // process tetrahedrons with 0, 3, 7, 4, cubeCenter, leftCenter vertecies
-                    std::pair<R3Point, double> LeftCenterPair(leftCenter, ThresholdFunctionLeftCenter);
-
-                    std::pair<R3Point, double> AdjacentCubeVertexPairs[4];
-                    AdjacentCubeVertexPairs[0] = CubeVertexPairs[0];
-                    AdjacentCubeVertexPairs[1] = CubeVertexPairs[3];
-                    AdjacentCubeVertexPairs[2] = CubeVertexPairs[7];
-                    AdjacentCubeVertexPairs[3] = CubeVertexPairs[4];
-
-                    for (int i = 0; i < 4; ++i) {
-                        Tetrahedron CurrentTetrahedron(CubeCenterPair, LeftCenterPair,
-                            AdjacentCubeVertexPairs[i], AdjacentCubeVertexPairs[(i + 1) % 4]);
-                        triangulation.TriangulationOfTetrahedron(CurrentTetrahedron);
-                    }
-
-                } // end if (... LEFT_FACE
-
-                // Right face
-                // if (right_neihbour is out of ROI or out of maxVolume)
-                if (voxelSet.faceOpen(cube, Voxel::FACE_RIGHT)) {
-
-                    R3Vector RightVoxelGradient =
-                        RightVoxel.VoxelGradient(pointer, dx, dy, dz); // HU per mm
-                    short RightDensity = RightVoxel.VoxelDensity(pointer);
-                    RightDensity -= threshold;
-
-                    double ThresholdFunctionRightCenter = RightDensity +
-                        (cubeCenter - cubeVertices[0]).scalarProduct(RightVoxelGradient);
-
-                    // process tetrahedrons with 1, 2, 6, 5, cubeCenter, rightCenter vertecies
-                    std::pair<R3Point, double> RightCenterPair(rightCenter, ThresholdFunctionRightCenter);
-
-                    std::pair<R3Point, double> AdjacentCubeVertexPairs[4];
-                    AdjacentCubeVertexPairs[0] = CubeVertexPairs[1];
-                    AdjacentCubeVertexPairs[1] = CubeVertexPairs[2];
-                    AdjacentCubeVertexPairs[2] = CubeVertexPairs[6];
-                    AdjacentCubeVertexPairs[3] = CubeVertexPairs[5];
-
-                    for (int i = 0; i < 4; ++i) {
-                        Tetrahedron CurrentTetrahedron(CubeCenterPair, RightCenterPair,
-                            AdjacentCubeVertexPairs[i], AdjacentCubeVertexPairs[(i + 1) % 4]);
-                        triangulation.TriangulationOfTetrahedron(CurrentTetrahedron);
-                    }
-
-                } // end if (... RIGHT_FACE
-
-                // Bottom face
-                // if (bottom_neihbour is out of ROI or out of maxVolume)
-                if (voxelSet.faceOpen(cube, Voxel::FACE_BOTTOM)) {
-
-                    R3Vector BottomVoxelGradient =
-                        BottomVoxel.VoxelGradient(pointer, dx, dy, dz); // HU per mm
-                    short BottomDensity = BottomVoxel.VoxelDensity(pointer);
-                    BottomDensity -= threshold;
-
-                    double ThresholdFunctionBottomCenter = BottomDensity +
-                        (cubeCenter - cubeVertices[0]).scalarProduct(BottomVoxelGradient);
-
-                    // process tetrahedrons with 0, 1, 2, 3, cubeCenter, bottomCenter vertecies
-                    std::pair<R3Point, double> BottomCenterPair(bottomCenter, ThresholdFunctionBottomCenter);
-
-                    std::pair<R3Point, double> AdjacentCubeVertexPairs[4];
-                    AdjacentCubeVertexPairs[0] = CubeVertexPairs[0];
-                    AdjacentCubeVertexPairs[1] = CubeVertexPairs[1];
-                    AdjacentCubeVertexPairs[2] = CubeVertexPairs[2];
-                    AdjacentCubeVertexPairs[3] = CubeVertexPairs[3];
-
-                    for (int i = 0; i < 4; ++i) {
-                        Tetrahedron CurrentTetrahedron(CubeCenterPair, BottomCenterPair,
-                            AdjacentCubeVertexPairs[i], AdjacentCubeVertexPairs[(i + 1) % 4]);
-                        triangulation.TriangulationOfTetrahedron(CurrentTetrahedron);
-                    }
-
-                } // end if (... BOTTOM_FACE
-
-                // Top face
-                // if (top_neihbour is out of ROI or out of maxVolume)
-                if (voxelSet.faceOpen(cube, Voxel::FACE_TOP)) {
-
-                    R3Vector TopVoxelGradient =
-                        TopVoxel.VoxelGradient(pointer, dx, dy, dz); // HU per mm
-                    short TopDensity = TopVoxel.VoxelDensity(pointer);
-                    TopDensity -= threshold;
-
-                    double ThresholdFunctionTopCenter = TopDensity +
-                        (cubeCenter - cubeVertices[0]).scalarProduct(TopVoxelGradient);
-
-                    // process tetrahedrons with 4, 5, 6, 7, cubeCenter, topCenter vertecies
-                    std::pair<R3Point, double> TopCenterPair(topCenter, ThresholdFunctionTopCenter);
-
-                    std::pair<R3Point, double> AdjacentCubeVertexPairs[4];
-                    AdjacentCubeVertexPairs[0] = CubeVertexPairs[4];
-                    AdjacentCubeVertexPairs[1] = CubeVertexPairs[5];
-                    AdjacentCubeVertexPairs[2] = CubeVertexPairs[6];
-                    AdjacentCubeVertexPairs[3] = CubeVertexPairs[7];
-
-                    for (int i = 0; i < 4; ++i) {
-                        Tetrahedron CurrentTetrahedron(CubeCenterPair, TopCenterPair,
-                            AdjacentCubeVertexPairs[i], AdjacentCubeVertexPairs[(i + 1) % 4]);
-                        triangulation.TriangulationOfTetrahedron(CurrentTetrahedron);
-                    }
-
-                } // end if (... TOP_FACE
-
-            } // end for (ix...
-        } // end for (iy...
-    } // end for (slice...
+        IsCalculate[cube] = true;
+    }
 }
 
-void InitializeVoxels(Voxel& cube, Voxel& BottomVoxel, Voxel& TopVoxel, Voxel& LeftVoxel, Voxel& RightVoxel,
+void TriangulateBySkala(const Voxel& cube, const Voxel::Face& face, const std::set<Voxel>& Borderlayer, Triangulation& triangulation,
+    const R3Graph::R3Point& origin, double dx, double dy, double dz, short* pointer, R3Graph::R3Point cubeVertices[8], const short threshold)
+{
+    const Voxel Neighbour(cube.slice + Voxel::FACE_DIRECTIONS[face][0],
+        cube.point.x + Voxel::FACE_DIRECTIONS[face][1],
+        cube.point.y + Voxel::FACE_DIRECTIONS[face][2]);
+
+    if (Borderlayer.count(Neighbour) == 0)
+        return;
+    else {
+        R3Point cubeCenter = voxel3DCoord(cube, origin, dx, dy, dz);
+        R3Point NeighbourCenter = voxel3DCoord(Neighbour, origin, dx, dy, dz);
+
+        R3Vector cubeGradient = cube.VoxelGradient(pointer, dx, dy, dz);// HU per mm
+        short cubeDensity = cube.VoxelDensity(pointer) - threshold;
+        R3Vector NeighbourGradient = Neighbour.VoxelGradient(pointer, dx, dy, dz);// HU per mm
+        short NeighbourDensity = Neighbour.VoxelDensity(pointer) - threshold;
+
+        double ThresholdFunctionCubeCenter = cubeDensity + (cubeCenter - cubeVertices[0]).scalarProduct(cubeGradient);
+        double ThresholdFunctionNeighbourCenter = NeighbourDensity + (NeighbourCenter - cubeVertices[0]).scalarProduct(NeighbourGradient);
+
+        std::pair<R3Point, double> CubeCenterPair(cubeCenter, ThresholdFunctionCubeCenter);
+        std::pair<R3Point, double> NeighbourCenterPair(NeighbourCenter, ThresholdFunctionNeighbourCenter);
+
+        int i = 0, j = 0, k = 0, l = 0;
+        InitializeVertexNumbers(face, i, j, k, l);
+        const std::vector<int> indicies = { i, j, k, l };
+
+        std::pair<R3Point, double> CubeVertexPairs[4];
+        for (int i = 0; i < 4; ++i)
+        {
+            int ind = indicies[i];
+            double ThresholdFunction = cubeDensity + (cubeVertices[ind] - cubeVertices[0]).scalarProduct(cubeGradient);
+            CubeVertexPairs[i] = { cubeVertices[ind], ThresholdFunction };
+        }
+
+        for (int i = 0; i < 4; ++i) {
+            // cube edges: 0-1, 1-2, 2-3, (!) 3-0 (!)
+            DensityTetrahedron CurrentTetrahedron(CubeCenterPair, NeighbourCenterPair,
+                CubeVertexPairs[i], CubeVertexPairs[(i + 1) % 4]);
+            triangulation.TriangulationOfTetrahedron(CurrentTetrahedron);
+        }
+    }
+}
+
+void BorderLayerFill(const VoxelSet& voxelSet, std::set<Voxel>& Borderlayer)
+{
+    const VoxelBox& voxelBox = voxelSet.voxelBox;
+    int sliceStart = 0, sliceFinish = 0, ixmin = 0, ixmax = 0, iymin = 0, iymax = 0;
+    BoxBorders(voxelSet, sliceStart, sliceFinish, ixmin, ixmax, iymin, iymax);
+    
+    std::vector<Voxel::Face> faces = {  Voxel::FACE_FRONT,
+        Voxel::FACE_BACK, Voxel::FACE_LEFT, Voxel::FACE_RIGHT, Voxel::FACE_BOTTOM, Voxel::FACE_TOP };
+
+    for (int slice = sliceFinish / 2; slice <= sliceFinish * 3 / 4; ++slice) 
+    {
+        for (int iy = iymax / 2; iy <= iymax * 3 / 4; ++iy) 
+        {
+            for (int ix = ixmax / 2; ix <= ixmax * 3 / 4; ++ix) 
+            {
+                if (voxelSet.voxelAt(slice, ix, iy) == 0)
+                    continue;
+
+                for (const auto& face : faces)
+                    BorderNeighbourFill(Voxel { slice, ix, iy }, face, Borderlayer, voxelSet);
+            }
+        }
+    }
+}
+
+void BorderNeighbourFill(const Voxel& cube, const Voxel::Face& face, std::set<Voxel>& Borderlayer, const VoxelSet& voxelSet)
+{
+    if (!voxelSet.faceOpen(cube, face))
+        return;
+    else
+    {
+        Borderlayer.insert(cube);
+        Voxel Neighbour(
+            cube.slice + Voxel::FACE_DIRECTIONS[face][0],
+            cube.point.x + Voxel::FACE_DIRECTIONS[face][1],
+            cube.point.y + Voxel::FACE_DIRECTIONS[face][2]
+        );
+        Borderlayer.insert(Neighbour);
+
+        for (int i = -1; i < 2; ++i)
+        {
+            for (int j = -1; j < 2; ++j)
+            {
+                if (face == Voxel::FACE_FRONT || face == Voxel::FACE_BACK)
+                {
+                    Borderlayer.insert({ cube.slice + i, cube.point.x + j, cube.point.y });
+                    Borderlayer.insert({ Neighbour.slice + i, Neighbour.point.x + j, Neighbour.point.y });
+                }
+                else if (face == Voxel::FACE_LEFT || face == Voxel::FACE_RIGHT)
+                {
+                    Borderlayer.insert({ cube.slice + i, cube.point.x, cube.point.y + j });
+                    Borderlayer.insert({ Neighbour.slice + i, Neighbour.point.x, Neighbour.point.y + j });
+                }
+                else if (face == Voxel::FACE_TOP || face == Voxel::FACE_BOTTOM)
+                {
+                    Borderlayer.insert({ cube.slice, cube.point.x + i, cube.point.y + j });
+                    Borderlayer.insert({ Neighbour.slice, Neighbour.point.x + i, Neighbour.point.y + j });
+                }
+            }
+        }
+    }
+}
+
+void InitializeVoxels(const Voxel& cube, Voxel& BottomVoxel, Voxel& TopVoxel, Voxel& LeftVoxel, Voxel& RightVoxel,
     Voxel& FrontVoxel, Voxel& BackVoxel)
 {
     BottomVoxel = Voxel(cube.slice - 1, cube.point.x, cube.point.y);
@@ -796,5 +712,46 @@ void InitializeVoxels(Voxel& cube, Voxel& BottomVoxel, Voxel& TopVoxel, Voxel& L
     RightVoxel = Voxel(cube.slice, cube.point.x + 1, cube.point.y);
     FrontVoxel = Voxel(cube.slice, cube.point.x, cube.point.y - 1);
     BackVoxel = Voxel(cube.slice, cube.point.x, cube.point.y + 1);
+}
+
+void SkalaTriangulation(const Voxel& cube, const Voxel::Face& face, short* pointer, double dx, double dy, double dz,
+    int threshold, R3Graph::R3Point cubeVertices[8], const std::pair<R3Graph::R3Point, double>& CubeCenterPair, Triangulation& triangulation,
+    const VoxelSet& voxelSet, const R3Graph::R3Point& origin, const std::pair<R3Graph::R3Point, double> CubeVertexPairs[8])
+{
+    if (!voxelSet.faceOpen(cube, face))
+        return;
+    else
+    {
+        Voxel Neighbour(
+            cube.slice + Voxel::FACE_DIRECTIONS[face][0],
+            cube.point.x + Voxel::FACE_DIRECTIONS[face][1],
+            cube.point.y + Voxel::FACE_DIRECTIONS[face][2]
+        );
+        R3Vector NeighbourVoxelGradient =
+            Neighbour.VoxelGradient(pointer, dx, dy, dz); // HU per mm
+        short FrontDensity = Neighbour.VoxelDensity(pointer);
+        FrontDensity -= threshold;
+
+        double ThresholdFunctionFrontCenter = FrontDensity +
+            (CubeCenterPair.first - cubeVertices[0]).scalarProduct(NeighbourVoxelGradient);
+
+        R3Point NeighbourCenter = voxel3DCoord(cube, origin, dx, dy, dz);
+        std::pair<R3Point, double> NeighbourCenterPair(NeighbourCenter, ThresholdFunctionFrontCenter);
+
+        int i = 0, j = 0, k = 0, l = 0;
+        InitializeVertexNumbers(face, i, j, k, l);
+        std::pair<R3Point, double> AdjacentCubeVertexPairs[4];
+        AdjacentCubeVertexPairs[0] = CubeVertexPairs[i];
+        AdjacentCubeVertexPairs[1] = CubeVertexPairs[j];
+        AdjacentCubeVertexPairs[2] = CubeVertexPairs[k];
+        AdjacentCubeVertexPairs[3] = CubeVertexPairs[l];
+
+        for (int i = 0; i < 4; ++i) {
+            // cube edges: 0-1, 1-2, 2-3, (!) 3-0 (!)
+            DensityTetrahedron CurrentTetrahedron(CubeCenterPair, NeighbourCenterPair,
+                AdjacentCubeVertexPairs[i], AdjacentCubeVertexPairs[(i + 1) % 4]);
+            triangulation.TriangulationOfTetrahedron(CurrentTetrahedron);
+        }
+    }
 }
 

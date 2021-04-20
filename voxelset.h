@@ -84,12 +84,12 @@ public:
 
     // For given face, contains shifts in slice, x, y = -1, 0, 1
     static const int FACE_DIRECTIONS[6][3]; // Defined in "VoxelSet.cpp"
-    short VoxelDensity(short* p) {
+    short VoxelDensity(short* p) const {
         auto VoxelPointer = p + (point.x + point.y * 512 + slice * 512 * 512);
         return *VoxelPointer;
     }
 
-    R3Graph::R3Vector VoxelGradient(short* pointer, double dx, double dy, double dz){// HU per mm
+    R3Graph::R3Vector VoxelGradient(short* pointer, double dx, double dy, double dz) const{// HU per mm
     
         Voxel RightVoxel = Voxel(slice, point.x + 1, point.y);
         Voxel BackVoxel = Voxel(slice, point.x, point.y + 1);
@@ -324,7 +324,7 @@ inline R3Graph::R3Point voxel3DCoord(
     );
 }
 
-void BoxBorders(const VoxelBox&, const VoxelSet&, int&, int&, int&, int&, int&, int&);
+void BoxBorders(const VoxelSet&, int&, int&, int&, int&, int&, int&);
 
 void InitializeNeighboursCentres(const Voxel& cube, 
     const R3Graph::R3Point& origin, double dx, double dy,
@@ -352,7 +352,27 @@ void InitializeNormal(const Voxel::Face& face, R3Graph::R3Vector& Normal);
 void AddVertex(std::map<Voxel, int>& vertexIndices, Voxel extendedVoxels[8], Triangulation& triangulation, 
     R3Graph::R3Point cubeVertices[8], int indices[8], const int i);
 
-void InitializeVoxels(Voxel& cube, Voxel& BottomVoxel, Voxel& TopVoxel, Voxel& LeftVoxel, Voxel& RightVoxel,
+void InitializeVoxels(const Voxel& cube, Voxel& BottomVoxel, Voxel& TopVoxel, Voxel& LeftVoxel, Voxel& RightVoxel,
     Voxel& FrontVoxel, Voxel& BackVoxel);
+
+
+void SkalaTriangulation(const Voxel& cube, const Voxel::Face& face, short* pointer, double dx, double dy, double dz,
+    int threshold, R3Graph::R3Point cubeVertices[8], const std::pair<R3Graph::R3Point, double>& CubeCenterPair, Triangulation& triangulation,
+    const VoxelSet& voxelSet, const R3Graph::R3Point& origin, const std::pair<R3Graph::R3Point, double> CubeVertexPairs[8]);
+
+void BorderLayerFill(const VoxelSet& voxelSet, std::set<Voxel>& Borderlayer);
+
+void BorderNeighbourFill(const Voxel& cube, const Voxel::Face& face, std::set<Voxel>& Borderlayer, const VoxelSet& voxelSet);
+
+void TriangulateBySkala(const Voxel& cube, const Voxel::Face& face, const std::set<Voxel>& Borderlayer, Triangulation& triangulation,
+    const R3Graph::R3Point& origin, double dx, double dy, double dz, short* pointer, R3Graph::R3Point cubeVertices[8], const short threshold);
+
+void FillVoids(VoxelSet& voxelSet);
+
+Voxel SearchSeed(VoxelSet& voxelSet);
+
+int CountRoiVoxels(VoxelSet& voxelSet);
+
+Voxel SearchSliceSeed(const VoxelSet & voxelSet, int slice);
 
 #endif
