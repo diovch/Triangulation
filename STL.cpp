@@ -1,6 +1,7 @@
 #include "STL.h"
 #include "R3Graph.h"
 #include <fstream>
+#include <iomanip>
 //TODO Tune WriteBinarySTL()
 void WriteSTLBinary(const Triangulation& triangulation, std::string& filename)
 {
@@ -60,12 +61,14 @@ void WriteStlASCII(const Triangulation& triangulation, std::string& filename)
 		R3Graph::R3Point p1 = triangulation.vertices.at(t.indices[1]).point;
 		R3Graph::R3Point p2 = triangulation.vertices.at(t.indices[2]).point;
 
-		out << t.Normal.x << " " << t.Normal.y << " " << t.Normal.z << std::endl;
+		//out << std::setprecision(6);
+		out << std::setprecision(9) << t.Normal.x << " " << t.Normal.y << " " << t.Normal.z << std::endl;
 		out << "    " << "outer loop" << std::endl;
 
-		out << "    " << "vertex " << p0.x << " " << p0.y << " " << p0.z << std::endl;
-		out << "    " << "vertex " << p1.x << " " << p1.y << " " << p1.z << std::endl;
-		out << "    " << "vertex " << p2.x << " " << p2.y << " " << p2.z << std::endl;
+		//out << std::setprecision(6);
+		out << "    " << "vertex " << std::setprecision(9) << p0.x << " " << p0.y << " " << p0.z << std::endl;
+		out << "    " << "vertex " << std::setprecision(9) << p1.x << " " << p1.y << " " << p1.z << std::endl;
+		out << "    " << "vertex " << std::setprecision(9) << p2.x << " " << p2.y << " " << p2.z << std::endl;
 
 		out << "    " << "endloop" << std::endl;
 		out << "    " << "endfacet" << std::endl;

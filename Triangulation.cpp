@@ -1850,11 +1850,10 @@ void Triangulation::TriangulationOfTetrahedron(R3Graph::DensityTetrahedron& tetr
     {
         double thrfun1 = tetrahedron.edges[i].A.second;
         double thrfun2 = tetrahedron.edges[i].B.second;
-        if (thrfun1 * thrfun2 < 0.)
+        if (thrfun1 * thrfun2 < 0. || fabs(thrfun1) < R3_EPSILON || fabs(thrfun2) < R3_EPSILON)
         {
             if (tetrahedron.edges[i].index == 0)
             {
-
                 R3Point v = tetrahedron.edges[i].PointOnEdge();
                 vertices.push_back(v);
 
@@ -1866,7 +1865,6 @@ void Triangulation::TriangulationOfTetrahedron(R3Graph::DensityTetrahedron& tetr
                 // vertex has already computed
                 TriangleIndices.push_back(tetrahedron.edges[i].index);
             }
-            EdgesWithPoints.insert(i);
         }
     }
     // Add triangles
@@ -1896,3 +1894,4 @@ void Triangulation::TriangulationOfTetrahedron(R3Graph::DensityTetrahedron& tetr
         triangles.push_back(t2);
     }
 }
+

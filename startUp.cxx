@@ -14,14 +14,14 @@
 
 double VoxelDensity(const Voxel&, short*);
 Voxel SearchSeed(short*, int, VoxelBox&);
-void WriteStlFile(const Triangulation&, std::ofstream&);
+void WriteStlASCII(const Triangulation&, std::ofstream&);
 
 int main(int argc, char* argv[])
 {
 	if (0) // 6 necessary arguments
 	{
 		std::cerr << "Usage: " << std::endl;
-		std::cerr << argv[0] << " -i head_cta.nii -m -s sigma head_cta_segm.nii -t threshold -o out.nii" << std::endl;
+		std::cerr << argv[0] << " -i head_cta.nii -s sigma -t threshold" << std::endl;
 		return EXIT_FAILURE;
 	}
 
@@ -108,10 +108,13 @@ int main(int argc, char* argv[])
 		pointer,
 		voxelSet);
 	
-	Triangulation triangulation;
-	std::map<int, std::set<int>> VerxteNeighbours;
+	if(0)
+		FillVoids(voxelSet);
 	
-	if (0)
+	Triangulation triangulation;
+	std::map<int, std::set<int>> VertexNeighbours;
+	
+	if (1)
 		computeTriangulationOfVoxelSet_MY(
 			pointer,
 			threshold,
@@ -122,7 +125,7 @@ int main(int argc, char* argv[])
 		);
 	else
 		computeTriangulationOfVoxelSet(
-			VerxteNeighbours,
+			VertexNeighbours,
 			triangulation,
 			voxelSet,
 			{ 0,0,0 },
@@ -132,7 +135,7 @@ int main(int argc, char* argv[])
 	
 
 	if (0)
-		Taubin(triangulation, VerxteNeighbours, 0.33, -0.331, 15);
+		Taubin(triangulation, VertexNeighbours, 0.33, -0.331, 15);
 	//else
 	//	triangulation.taubinSmoothing(1, 0.33, 0.331, false);
 	
@@ -140,9 +143,10 @@ int main(int argc, char* argv[])
 
 	std::ofstream out;
 	std::string FileName = "C:\\Users\\owchi\\source\\repos\\TEST\\bin\\IsoSurface.stl";
+	std::string filename = "IsoSurface.stl";
 	out.open(FileName);
 	if(out.is_open())
-		WriteStlFile(triangulation, out);
+		WriteStlASCII(triangulation, filename);
 	out.close();
 
 	return EXIT_SUCCESS;

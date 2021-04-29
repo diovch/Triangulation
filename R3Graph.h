@@ -6,6 +6,7 @@
 #include <vector>
 
 //#include "Triangulation.h"
+//const double R3_EPSILON = 1.0e-8;
 
 namespace R3Graph {
 
@@ -361,6 +362,11 @@ public:
     //...     return *this;
     //... }
 
+    double length()
+    {
+        return sqrt(x * x + y * y + z * z);
+    }
+
     double distance(const R3Point& p) const {
         return (p - *this).length();
     }
@@ -450,21 +456,49 @@ public:
     }
 
     R3Point PointOnEdge() 
-    {// TODO: introduce eps
+    {
+        // thrfunA
+        // |\
+        // | \              A, B - points in 3D
+        // |  \
+        // |   \ iso      B
+        // |----\---------|
+        // A     \ point  |
+        //        \       |
+        //         \      |
+        //          \     |thrfunB
+        //           \    |
+        //            \   |
+        //             \  |
+        //              \ |
+        //               \| 
+        //return A.first + (B.first - A.first) * 0.5;
+         
         if (A.second < 0.)
             SwapVerticies();
 
-        R3Point p1 = A.first;
-        double thrfun1 = A.second;
+        R3Point pointA = A.first;
+        double thresholdFunctionA = fabs(A.second);
 
-        R3Point p2 = B.first;
-        double thrfun2 = B.second;
+        R3Point pointB = B.first;
+        double thresholdFunctionB = fabs(B.second);
 
-        R3Point argVector = p2 - p1; // vector from end of p1 to end of p2
-        double thrfunvar = abs(thrfun1) + abs(thrfun2); // f(ROI) - (- |f(!ROI)|)
-        R3Point signChange = argVector * (thrfun1 / thrfunvar); // (thrfun1 / funvar) is similar coeffcient
-        signChange += p1;
-
+        R3Point signChange;
+        if (thresholdFunctionA < R3_EPSILON)
+        {
+            signChange = pointA;
+        }
+        else if (thresholdFunctionB < R3_EPSILON)
+        {
+            signChange = pointB;
+        }
+        else
+        {
+            R3Point argVector = pointB - pointA; // vector from end of pointA to end of pointB
+            //double thresholdFunctionVariation = abs(thresholdFunctionA) + abs(thresholdFunctionB); // f(ROI) - (- |f(!ROI)|)
+            signChange = pointA + argVector * 0.5;// (thresholdFunctionA / thresholdFunctionVariation); // (thrfun1 / funvar) is similar coefficient
+        }
+        
         return signChange;
     }
 };
@@ -485,6 +519,11 @@ public:
         const R3Point& CubeVertex1, double ThrFunCubeVertex1,
         const R3Point& CubeVertex2, double ThrFunCubeVertex2)
     {
+        ThrFunCubeCenter = ThrFunCubeCenter < R3_EPSILON ? 10e-9 : ThrFunCubeCenter;
+        ThrFunNeghbourCenter = ThrFunNeghbourCenter < R3_EPSILON ? 10e-9 : ThrFunNeghbourCenter;
+        ThrFunCubeVertex1 = ThrFunCubeVertex1 < R3_EPSILON ? 10e-9 : ThrFunCubeVertex1;
+        ThrFunCubeVertex2 = ThrFunCubeVertex2 < R3_EPSILON ? 10e-9 : ThrFunCubeVertex2;
+
         //first vertex always in ROI cube, only second vertex may appear outside ROI
         // edges beetwen cube verticies and neighbour center
         edges[0] = Edge(CubeCenter, ThrFunCubeCenter,
@@ -508,11 +547,16 @@ public:
             CubeVertex2, ThrFunCubeVertex2);
     }
 
-    DensityTetrahedron(const std::pair<R3Point,double>& CubeCenterPair,
-        const std::pair<R3Point, double>& NeghbourCenterPair,
-        const std::pair<R3Point, double>& CubeVertex1Pair,
-        const std::pair<R3Point, double>& CubeVertex2Pair)
+    DensityTetrahedron(std::pair<R3Point,double>& CubeCenterPair,
+        std::pair<R3Point, double>& NeghbourCenterPair,
+        std::pair<R3Point, double>& CubeVertex1Pair,
+        std::pair<R3Point, double>& CubeVertex2Pair)
     {
+
+        CubeCenterPair.second = (fabs(CubeCenterPair.second) < R3_EPSILON) ? 10e-9 : CubeCenterPair.second;
+        NeghbourCenterPair.second = (fabs(NeghbourCenterPair.second) < R3_EPSILON) ? 10e-9 : NeghbourCenterPair.second;
+        CubeVertex1Pair.second = (fabs(CubeVertex1Pair.second) < R3_EPSILON) ? 10e-9 : CubeVertex1Pair.second;
+        CubeVertex2Pair.second = (fabs(CubeVertex2Pair.second) < R3_EPSILON) ? 10e-9 : CubeVertex2Pair.second;
         //first vertex always in ROI cube, only second vertex may appear outside ROI
         // edges beetwen cube verticies and neighbour center
         edges[0] = Edge(CubeCenterPair, NeghbourCenterPair);

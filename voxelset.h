@@ -89,12 +89,13 @@ public:
         return *VoxelPointer;
     }
 
-    R3Graph::R3Vector VoxelGradient(short* pointer, double dx, double dy, double dz) const{// HU per mm
+    R3Graph::R3Vector VoxelGradient(short* pointer, double dx, double dy, double dz) const
+    {// HU per mm
     
         Voxel RightVoxel = Voxel(slice, point.x + 1, point.y);
         Voxel BackVoxel = Voxel(slice, point.x, point.y + 1);
         Voxel TopVoxel = Voxel(slice + 1, point.x, point.y);
-        double density = (double)(*this).VoxelDensity(pointer);
+        double density = (double)((*this).VoxelDensity(pointer));
 
         R3Graph::R3Vector result = R3Graph::R3Vector(
             ((double)(RightVoxel.VoxelDensity(pointer)) - density) / dx,
@@ -357,12 +358,12 @@ void InitializeVoxels(const Voxel& cube, Voxel& BottomVoxel, Voxel& TopVoxel, Vo
 
 
 void SkalaTriangulation(const Voxel& cube, const Voxel::Face& face, short* pointer, double dx, double dy, double dz,
-    int threshold, R3Graph::R3Point cubeVertices[8], const std::pair<R3Graph::R3Point, double>& CubeCenterPair, Triangulation& triangulation,
+    int threshold, R3Graph::R3Point cubeVertices[8], std::pair<R3Graph::R3Point, double>& CubeCenterPair, Triangulation& triangulation,
     const VoxelSet& voxelSet, const R3Graph::R3Point& origin, const std::pair<R3Graph::R3Point, double> CubeVertexPairs[8]);
 
-void BorderLayerFill(const VoxelSet& voxelSet, std::set<Voxel>& Borderlayer);
+void FillBorderLayer(const VoxelSet& voxelSet, std::set<Voxel>& Borderlayer);
 
-void BorderNeighbourFill(const Voxel& cube, const Voxel::Face& face, std::set<Voxel>& Borderlayer, const VoxelSet& voxelSet);
+void FillBorderNeighbour(const Voxel& cube, const Voxel::Face& face, std::set<Voxel>& Borderlayer, const VoxelSet& voxelSet);
 
 void TriangulateBySkala(const Voxel& cube, const Voxel::Face& face, const std::set<Voxel>& Borderlayer, Triangulation& triangulation,
     const R3Graph::R3Point& origin, double dx, double dy, double dz, short* pointer, R3Graph::R3Point cubeVertices[8], const short threshold);
