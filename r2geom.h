@@ -135,6 +135,7 @@ public:
         return G2Point<V>(x + v.x, y + v.y);
     }
 
+
     G2Point<V>& operator+=(const G2Vector<V>& v) {
         x += v.x;
         y += v.y;

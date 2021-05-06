@@ -12,7 +12,7 @@
 #include <fstream>
 #include <algorithm>
 
-double VoxelDensity(const Voxel&, short*);
+short VoxelDensity(const Voxel&, short*);
 Voxel SearchSeed(short*, int, VoxelBox&);
 void WriteStlASCII(const Triangulation&, std::ofstream&);
 
@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
 
 	const char* inputFileName = "";
 	char* outputFileName = "";
-	int threshold = 0;
+	short threshold = 0;
 	double sigma = 0.;
 
 	for (int i = 1; i < argc; ++i) {
@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
 	VoxelBox voxelBoxOfImage(Voxel (0, (0,0)), xMax, yMax, MaxSlices); 
 	Voxel seed = SearchSeed(pointer, threshold, voxelBoxOfImage);
 	VoxelSet voxelSet;
-
+	
 	detectVoxelSetFromCta(
 		(*VoxelDensity),
 		threshold,
@@ -110,11 +110,13 @@ int main(int argc, char* argv[])
 	
 	if(0)
 		FillVoids(voxelSet);
+
+	ContourSegmentation(voxelSet, seed);
 	
 	Triangulation triangulation;
 	std::map<int, std::set<int>> VertexNeighbours;
 	
-	if (1)
+	if (0)
 		computeTriangulationOfVoxelSet_MY(
 			pointer,
 			threshold,
@@ -124,7 +126,7 @@ int main(int argc, char* argv[])
 			x_sc, y_sc, z_sc
 		);
 	else
-		computeTriangulationOfVoxelSet(
+		Triangulate_Custom(
 			VertexNeighbours,
 			triangulation,
 			voxelSet,
@@ -135,24 +137,20 @@ int main(int argc, char* argv[])
 	
 
 	if (0)
-		Taubin(triangulation, VertexNeighbours, 0.33, -0.331, 15);
+		Taubin(triangulation, VertexNeighbours, 0.33, -0.331, 25);
 	//else
 	//	triangulation.taubinSmoothing(1, 0.33, 0.331, false);
 	
 	//std::vector<std::set<Triangulation::Triangle>> s = Segmentation(triangulation, VerxteNeighbours);
 
-	std::ofstream out;
-	std::string FileName = "C:\\Users\\owchi\\source\\repos\\TEST\\bin\\IsoSurface.stl";
 	std::string filename = "IsoSurface.stl";
-	out.open(FileName);
-	if(out.is_open())
-		WriteStlASCII(triangulation, filename);
-	out.close();
+	WriteStlASCII(triangulation, filename);
+	
 
 	return EXIT_SUCCESS;
 }
 
-double VoxelDensity(const Voxel& v, short* p) {// поменять тип функции на short
+short VoxelDensity(const Voxel& v, short* p) {// поменять тип функции на short
 	auto VoxelPointer = p + (v.point.x + v.point.y * 512 + v.slice * 512 * 512);
 	return *VoxelPointer;
 }
@@ -161,7 +159,15 @@ Voxel SearchSeed(short* pointer, int threshold, VoxelBox& voxelBox) {
 	Voxel seed;
 	int num_seed = 0;
 	int xMax = voxelBox.width, yMax = voxelBox.depth, MaxSlices = voxelBox.height;
-//#pragma omp parallel for 
+	
+	int aortaX = 278, aortaY = 239, aortaZ = 436;
+	auto voxel = pointer + (aortaX + aortaY * xMax + aortaZ * xMax * yMax);
+	if (*voxel > threshold) 
+	{
+		seed = { aortaZ, {aortaX, aortaY} };
+		return seed;
+	}
+
 	for (int k = MaxSlices * 3 / 8; k < MaxSlices * 4 / 8; ++k) {
 		for (int i = xMax * 4 / 10; i < xMax * 5 / 10; ++i) {
 			for (int j = yMax * 4 / 10; j < yMax * 5 / 10; ++j) {

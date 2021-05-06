@@ -50,30 +50,34 @@ void WriteStlASCII(const Triangulation& triangulation, std::string& filename)
 	std::ofstream out;
 	filename = "C:\\Users\\owchi\\source\\repos\\TEST\\bin\\" + filename;
 	out.open(filename);
-	out << "solid iso" << std::endl;
+	if (out.is_open())
+	{
+		out << "solid iso" << std::endl;
 
-	for (int i = 0; i < triangulation.triangles.size(); ++i) {
-		out << "    " << "facet normal ";
+		for (int i = 0; i < triangulation.triangles.size(); ++i) {
+			out << "    " << "facet normal ";
 
-		Triangulation::Triangle t = triangulation.triangles.at(i);
+			Triangulation::Triangle t = triangulation.triangles.at(i);
 
-		R3Graph::R3Point p0 = triangulation.vertices.at(t.indices[0]).point;
-		R3Graph::R3Point p1 = triangulation.vertices.at(t.indices[1]).point;
-		R3Graph::R3Point p2 = triangulation.vertices.at(t.indices[2]).point;
+			R3Graph::R3Point p0 = triangulation.vertices.at(t.indices[0]).point;
+			R3Graph::R3Point p1 = triangulation.vertices.at(t.indices[1]).point;
+			R3Graph::R3Point p2 = triangulation.vertices.at(t.indices[2]).point;
 
-		//out << std::setprecision(6);
-		out << std::setprecision(9) << t.Normal.x << " " << t.Normal.y << " " << t.Normal.z << std::endl;
-		out << "    " << "outer loop" << std::endl;
+			//out << std::setprecision(6);
+			out << std::setprecision(9) << t.Normal.x << " " << t.Normal.y << " " << t.Normal.z << std::endl;
+			out << "    " << "outer loop" << std::endl;
 
-		//out << std::setprecision(6);
-		out << "    " << "vertex " << std::setprecision(9) << p0.x << " " << p0.y << " " << p0.z << std::endl;
-		out << "    " << "vertex " << std::setprecision(9) << p1.x << " " << p1.y << " " << p1.z << std::endl;
-		out << "    " << "vertex " << std::setprecision(9) << p2.x << " " << p2.y << " " << p2.z << std::endl;
+			//out << std::setprecision(6);
+			out << "    " << "vertex " << std::setprecision(9) << p0.x << " " << p0.y << " " << p0.z << std::endl;
+			out << "    " << "vertex " << std::setprecision(9) << p1.x << " " << p1.y << " " << p1.z << std::endl;
+			out << "    " << "vertex " << std::setprecision(9) << p2.x << " " << p2.y << " " << p2.z << std::endl;
 
-		out << "    " << "endloop" << std::endl;
-		out << "    " << "endfacet" << std::endl;
+			out << "    " << "endloop" << std::endl;
+			out << "    " << "endfacet" << std::endl;
+		}
+
+		out << "endsolid iso";
 	}
-
-	out << "endsolid iso";
+	out.close();
 }
 

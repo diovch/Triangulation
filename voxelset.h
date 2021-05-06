@@ -12,6 +12,14 @@
 
 class Triangulation;
 
+enum DirectionOfMovement
+{
+    X_POSITIVE = 0,
+    X_NEGATIVE = 1,
+    Y_POSITIVE = 2,
+    Y_NEGATIVE = 3
+};
+
 class Voxel {
 public:
     int slice;
@@ -142,7 +150,8 @@ public:
     void setSliceMax(int s) { height = s - origin.slice; }
 };
 
-class VoxelSet {
+class VoxelSet 
+{
 public:
     int xMax;
     int yMax;
@@ -286,7 +295,7 @@ double detectVoxelSet(
 );
 
 double detectVoxelSetFromCta(
-    double (*f)(const Voxel&, short* pointer),
+    short (*f)(const Voxel&, short* pointer),
     double threshold,
     const VoxelBox& voxelBox,
     const Voxel& seed,
@@ -375,5 +384,22 @@ Voxel SearchSeed(VoxelSet& voxelSet);
 int CountRoiVoxels(VoxelSet& voxelSet);
 
 Voxel SearchSliceSeed(const VoxelSet & voxelSet, int slice);
+
+void Triangulate_Custom(
+    std::map<int, std::set<int>>& VerxteNeighbours,
+    Triangulation& triangulation,
+    const VoxelSet& voxelSet,
+    const R3Graph::R3Point& origin,
+    double dx, double dy, double dz);
+
+void InitializeNormal_Custom(const Voxel::Face& face, R3Graph::R3Vector& Normal);
+
+void ContourSegmentation(VoxelSet& voxelSet, const Voxel& seed);
+
+Voxel LeftHandNeighbour(const Voxel& bug, const DirectionOfMovement& direction);
+
+Voxel RightHandNeighbour(const Voxel& bug, const DirectionOfMovement& direction);
+
+void TurnLeft(DirectionOfMovement& direction);
 
 #endif

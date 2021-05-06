@@ -18,7 +18,7 @@ public:
     class Triangle {
     public:
         int indices[3];
-        R3Graph::R3Vector Normal; // TODO repair normals
+        R3Graph::R3Vector Normal; 
         //??? int adjacentTriangles[3];
 
         /*Triangle(int i0, int i1, int i2) {

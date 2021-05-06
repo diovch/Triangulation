@@ -7,6 +7,8 @@
 
 using namespace R3Graph;
 
+
+
 static const Voxel NEIGHBOURS6[6] = {
     Voxel(0, 1, 0),
     Voxel(0, -1, 0),
@@ -73,7 +75,7 @@ double detectVoxelSet(
 
 // my realization with image pointer
 double detectVoxelSetFromCta(
-    double (*f)(const Voxel&, short* pointer),
+    short (*f)(const Voxel&, short* pointer),
     double threshold,
     const VoxelBox& voxelBox,
     const Voxel& seed,
@@ -112,7 +114,7 @@ double detectVoxelSetFromCta(
             if (voxelSet.voxelAt(n) != 0)
                 continue;   // Voxel is already in the set
 
-            double v = (*f)(n, pointer);
+            short v = (*f)(n, pointer);
             if (v < threshold)
                 continue;
             voxelSet.addVoxel(n, ROI_POSITIVE);
@@ -181,7 +183,6 @@ void FillVoids(VoxelSet& voxelSet)
         OutsideVoids.clear();
     }
 
-    (int)voxelSet.numVoxels + NumOutsideVoids <= NumVoxels;
 }
 
 Voxel SearchSeed(VoxelSet& voxelSet)
@@ -242,4 +243,124 @@ Voxel SearchSliceSeed(const VoxelSet & voxelSet, int slice)
         }
     }
     return {};
+}
+
+
+void ContourSegmentation(VoxelSet& voxelSet, const Voxel& seed)
+{   // Moore NeighborhoodTracing
+    if (voxelSet.voxelAt(seed) == 0)
+        return;
+
+    int zStart = seed.slice, xStart = seed.point.x, yStart = seed.point.y;
+    Voxel bug = seed;
+
+    for (int slice = 355; slice < voxelSet.maxSlices; ++slice)
+    {
+        DirectionOfMovement direction = Y_NEGATIVE;
+        while (voxelSet.voxelAt(bug) != ROI_POSITIVE) // first free voxel
+        {
+            bug.point.y--;
+        }
+        voxelSet.addVoxel(bug, ROI_MANUAL_NEGATIVE_BORDER);
+        I2Point initialPosition{ bug.point }, currentPosition{};
+        Voxel leftHandNeighbour, forwardNeighbour;
+
+
+        //    _     bug has an origin which it comes from and three futher directions - left, forward, right
+        //  _| |_   if left spot is free it turns left
+        // |_   _|  if forward - it moves forward
+        //   |_|    otherwise it turns right, so ROI area is being on the left hand 
+
+
+        while (currentPosition != initialPosition)
+        {
+            leftHandNeighbour = LeftHandNeighbour(bug, direction);
+            forwardNeighbour = bug + NEIGHBOURS6[direction];
+
+            if (voxelSet.voxelAt(leftHandNeighbour) != ROI_POSITIVE) 
+            {
+                bug = leftHandNeighbour;
+                TurnLeft(direction);
+            }
+            else if (voxelSet.voxelAt(forwardNeighbour) != ROI_POSITIVE)
+            {
+                bug = forwardNeighbour;
+            }
+            else
+            {
+                bug = RightHandNeighbour(bug, direction);
+            }
+            voxelSet.addVoxel(bug, ROI_MANUAL_NEGATIVE_BORDER);
+            currentPosition = bug.point;
+        }
+        
+    }
+}
+
+Voxel LeftHandNeighbour(const Voxel& bug, const DirectionOfMovement& direction)
+{
+    if (direction == Y_NEGATIVE)
+    {
+        return { bug.slice, bug.point.x + 1, bug.point.y };
+    }
+    else if (direction == Y_POSITIVE)
+    {
+        return { bug.slice, bug.point.x - 1, bug.point.y };
+    }
+    else if (direction == X_NEGATIVE)
+    {
+        return { bug.slice, bug.point.x, bug.point.y - 1};
+    }
+    else if(direction == X_POSITIVE)
+    {
+        return { bug.slice, bug.point.x, bug.point.y + 1};
+    }
+    else
+    {
+        return {};
+    }
+}
+
+Voxel RightHandNeighbour(const Voxel& bug, const DirectionOfMovement& direction)
+{
+    if (direction == Y_NEGATIVE)
+    {
+        return { bug.slice, bug.point.x - 1, bug.point.y };
+    }
+    else if (direction == Y_POSITIVE)
+    {
+        return { bug.slice, bug.point.x + 1, bug.point.y };
+    }
+    else if (direction == X_NEGATIVE)
+    {
+        return { bug.slice, bug.point.x, bug.point.y + 1 };
+    }
+    else if (direction == X_POSITIVE)
+    {
+        return { bug.slice, bug.point.x, bug.point.y - 1 };
+    }
+    else
+    {
+        return {};
+    }
+}
+
+void TurnLeft(DirectionOfMovement& direction)
+{
+    if (direction == Y_NEGATIVE)
+    {
+        direction = X_POSITIVE;
+    }
+    else if (direction == Y_POSITIVE)
+    {
+        direction = X_NEGATIVE;
+    }
+    else if (direction == X_NEGATIVE)
+    {
+        direction = Y_NEGATIVE;
+    }
+    else if (direction == X_POSITIVE)
+    {
+        direction = Y_POSITIVE;
+    }
 }

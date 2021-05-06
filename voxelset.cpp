@@ -755,3 +755,211 @@ void SkalaTriangulation(const Voxel& cube, const Voxel::Face& face, short* point
     }
 }
 
+void Triangulate_Custom(
+    std::map<int, std::set<int>>& VerxteNeighbours,
+    Triangulation& triangulation,
+    const VoxelSet& voxelSet,
+    const R3Point& origin,
+    double dx, double dy, double dz
+) {
+    int sliceStart = 0, sliceFinish = 0, ixmin = 0, ixmax = 0, iymin = 0, iymax = 0;
+    BoxBorders(voxelSet, sliceStart, sliceFinish, ixmin, ixmax, iymin, iymax);
+
+    triangulation.clear();
+
+    // Indices of extended voxels vertices in array
+    // Each voxel produce 8 vertices == extended voxels
+    // voxel (slice, x, y) -> 8 extended voxels:
+    //       (2*slice + s0, 2*x + s1, 2*y + s2), where
+    //                                           si = +-1
+    std::map<Voxel, int> vertexIndices;
+    std::vector<int> ind;
+
+    for (int slice = sliceStart; slice <= sliceFinish; ++slice)
+    {
+        for (int iy = iymax * 1 / 3; iy <= iymax; ++iy) 
+        {
+            for (int ix = ixmax * 1 / 2; ix <= ixmax * 3 / 4; ++ix) 
+            {
+    //for (int slice = sliceStart; slice <= sliceFinish; ++slice)
+    //{
+    //    for (int iy = iymin; iy <= iymax; ++iy)
+    //    {
+    //        for (int ix = ixmin; ix <= ixmax; ++ix)
+    //        {
+                if (voxelSet.voxelAt(slice, ix, iy) == 0)
+                    continue;
+
+                // Enumeration of cube vertices and faces:
+                //        7         6
+                //       +---------+          z
+                //      /   top   /|        ^
+                //   4 / |       / |        |
+                //    +---------+5 |        |
+                //Left|         |  | Right  |    ^ y
+                //    |  |  back|  |        |   /
+                //    |  + - - -|- +        |  /
+                //    |  3      | /2        | /
+                //    |/  Front |/          |/
+                //    +---------+           ------> x
+                //   0  bottom   1
+
+                const Voxel cube(slice, ix, iy);
+                R3Point cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter;
+                InitializeNeighboursCentres(cube, origin, dx, dy, dz,
+                    cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter);
+
+                R3Point cubeVertices[8];
+                InitializeCubeVerticies(cubeVertices,
+                    cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter);
+
+                Voxel extendedVoxels[8];
+                InitializeExtendedVoxels(extendedVoxels, cube);
+
+                int indices[9]; // Indices of vertices in array
+                for (int iv = 0; iv < 9; ++iv)
+                    indices[iv] = (-1);
+
+                const std::vector<Voxel::Face> faces = { Voxel::FACE_FRONT,
+                        Voxel::FACE_BACK, Voxel::FACE_LEFT, Voxel::FACE_RIGHT, Voxel::FACE_BOTTOM, Voxel::FACE_TOP };
+
+                for (const auto& face : faces)
+                {
+                    std::vector<int> ind;
+                    ind.reserve(3);
+                    int i = 0, j = 0, k = 0, l = 0;
+                    InitializeVertexNumbers(face, i, j, k, l);
+
+                    if (!voxelSet.faceOpen(cube, face))
+                        continue;
+                    else 
+                    {
+                        // Add vertices
+                        AddVertex(vertexIndices, extendedVoxels, triangulation, cubeVertices, indices, i);
+                        AddVertex(vertexIndices, extendedVoxels, triangulation, cubeVertices, indices, j);
+                        AddVertex(vertexIndices, extendedVoxels, triangulation, cubeVertices, indices, k);
+                        AddVertex(vertexIndices, extendedVoxels, triangulation, cubeVertices, indices, l);
+
+                        // Add triangles for this face
+                        assert(
+                            indices[i] >= 0 &&
+                            indices[j] >= 0 &&
+                            indices[k] >= 0 &&
+                            indices[l] >= 0
+                        );
+
+
+                        Voxel extendedNeighbour(
+                            2*(cube.slice + Voxel::FACE_DIRECTIONS[face][0]),
+                            2*(cube.point.x + Voxel::FACE_DIRECTIONS[face][1]),
+                            2 * (cube.point.y + Voxel::FACE_DIRECTIONS[face][2])
+                        );
+                        R3Point neighbourCenter;
+                        if (face == Voxel::FACE_FRONT)
+                        {
+                            neighbourCenter = frontCenter;
+                        }
+                        else if(face == Voxel::FACE_BACK)
+                        {
+                            neighbourCenter = backCenter;
+                        }
+                        else if (face == Voxel::FACE_LEFT)
+                        {
+                            neighbourCenter = leftCenter;
+                        }
+                        else if (face == Voxel::FACE_RIGHT)
+                        {
+                            neighbourCenter = rightCenter;
+                        }
+                        else if (face == Voxel::FACE_BOTTOM)
+                        {
+                            neighbourCenter = bottomCenter;
+                        }
+                        else if (face == Voxel::FACE_TOP)
+                        {
+                            neighbourCenter = topCenter;
+                        }
+
+                        if (
+                            vertexIndices.count(extendedNeighbour) == 0) {
+                            // Add vertex to triangulation
+                            triangulation.vertices.push_back(
+                                neighbourCenter
+                            );
+                            indices[8] = (int)triangulation.vertices.size() - 1;
+                            vertexIndices[extendedNeighbour] = indices[8];
+                        }
+                        else {
+                            // Point is already in the array
+                            indices[8] = vertexIndices[extendedNeighbour];
+                        }
+
+                        // 1
+                        triangulation.triangles.push_back(
+                            Triangulation::Triangle(
+                                indices[i], indices[j], indices[8]
+                            )
+                        );
+                        InitializeNormal_Custom(face, triangulation.triangles.back().Normal);
+                        ind = { indices[i], indices[j], indices[8] };
+                        FillNeighbours(VerxteNeighbours, ind);
+
+                        // 2
+                        triangulation.triangles.push_back(
+                            Triangulation::Triangle(
+                                indices[j], indices[k], indices[8]
+                            )
+                        );
+                        InitializeNormal_Custom(face, triangulation.triangles.back().Normal);
+                        ind = { indices[j], indices[k], indices[8] };
+                        FillNeighbours(VerxteNeighbours, ind);
+
+                        // 3
+                        triangulation.triangles.push_back(
+                            Triangulation::Triangle(
+                                indices[k], indices[l], indices[8]
+                            )
+                        );
+                        InitializeNormal_Custom(face, triangulation.triangles.back().Normal);
+                        ind = { indices[k], indices[l], indices[8] };
+                        FillNeighbours(VerxteNeighbours, ind);
+
+                        // 4 
+                        triangulation.triangles.push_back(
+                            Triangulation::Triangle(
+                                indices[l], indices[i], indices[8]
+                            )
+                        );
+                        InitializeNormal_Custom(face, triangulation.triangles.back().Normal);
+                        ind = { indices[l], indices[i], indices[8] };
+                        FillNeighbours(VerxteNeighbours, ind);
+
+                        
+                    }
+                }
+
+            }
+        }
+    }
+}
+
+void InitializeNormal_Custom(const Voxel::Face& face, R3Graph::R3Vector& Normal)
+{//TODO Repair Normals
+    if (face == Voxel::Face::FACE_FRONT)
+        Normal = { 0., -1., 0. };
+
+    else if (face == Voxel::Face::FACE_BACK)
+        Normal = { 0., 1., 0. };
+
+    else if (face == Voxel::Face::FACE_LEFT)
+        Normal = { -1., 0., 0. };
+
+    else if (face == Voxel::Face::FACE_RIGHT)
+        Normal = { 1., 0., 0. };
+
+    else if (face == Voxel::Face::FACE_BOTTOM)
+        Normal = { 0., 0., -1. };
+
+    else if (face == Voxel::Face::FACE_TOP)
+        Normal = { 0., 0., 1. };
+}
