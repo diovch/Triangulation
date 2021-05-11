@@ -75,11 +75,11 @@ double detectVoxelSet(
 
 // my realization with image pointer
 double detectVoxelSetFromCta(
-    short (*f)(const Voxel&, short* pointer),
     double threshold,
     const VoxelBox& voxelBox,
     const Voxel& seed,
     short* pointer,
+    unsigned char* mask_pointer,
     VoxelSet& voxelSet
 ) {
     int sliceStart = voxelBox.origin.slice;
@@ -92,7 +92,7 @@ double detectVoxelSetFromCta(
     if (seed.slice < sliceStart || seed.slice > sliceFinish)
         return 0.;
 
-    if ((*f)(seed, pointer) < threshold)
+    if (VoxelDensity(seed, pointer) < threshold || VoxelType(seed, mask_pointer) != 2)
         return 0.;
 
     std::deque<Voxel> deq;
@@ -114,9 +114,9 @@ double detectVoxelSetFromCta(
             if (voxelSet.voxelAt(n) != 0)
                 continue;   // Voxel is already in the set
 
-            short v = (*f)(n, pointer);
-            if (v < threshold)
+            if (VoxelDensity(n, pointer) < threshold || VoxelType(n, mask_pointer) != 2)
                 continue;
+
             voxelSet.addVoxel(n, ROI_POSITIVE);
             deq.push_back(n);
             num += 1.;
@@ -363,4 +363,42 @@ void TurnLeft(DirectionOfMovement& direction)
     {
         direction = Y_POSITIVE;
     }
+}
+
+Voxel SearchSeed(short* pointer, unsigned char* mask_pointer, int threshold, VoxelBox& voxelBox) {
+    Voxel seed;
+    int num_seed = 0;
+    int xMax = voxelBox.width, yMax = voxelBox.depth, MaxSlices = voxelBox.height;
+
+    for (int k = MaxSlices * 3 / 8; k < MaxSlices * 4 / 8; ++k)
+    {
+        for (int i = xMax * 4 / 10; i < xMax * 5 / 10; ++i)
+        {
+            for (int j = yMax * 4 / 10; j < yMax * 5 / 10; ++j)
+            {
+                //for (int k = 0; k < MaxSlices; ++k) {
+                //	for (int i = 0; i < xMax; ++i) {
+                //		for (int j = 0; j < yMax; ++j) {
+                auto voxelDensity = pointer + (i + j * xMax + k * xMax * yMax);
+                auto roiMarker = mask_pointer + (i + j * xMax + k * xMax * yMax);
+                if (*voxelDensity > threshold && *roiMarker == 2)
+                {
+                    seed = { k, {i, j} };
+                    return seed;
+                }
+            }
+        }
+    }
+    return seed;
+}
+
+short VoxelDensity(const Voxel& v, short* pointer) {
+    auto VoxelPointer = pointer + (v.point.x + v.point.y * 512 + v.slice * 512 * 512);
+    return *VoxelPointer;
+}
+
+unsigned char VoxelType(const Voxel& v, unsigned char* mask_pointer)
+{
+    auto VoxelPointer = mask_pointer + (v.point.x + v.point.y * 512 + v.slice * 512 * 512);
+    return *VoxelPointer;
 }

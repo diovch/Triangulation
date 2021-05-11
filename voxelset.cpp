@@ -772,23 +772,27 @@ void Triangulate_Custom(
     // voxel (slice, x, y) -> 8 extended voxels:
     //       (2*slice + s0, 2*x + s1, 2*y + s2), where
     //                                           si = +-1
-    std::map<Voxel, int> vertexIndices;
-    std::vector<int> ind;
+    
 
-    for (int slice = sliceStart; slice <= sliceFinish; ++slice)
-    {
-        for (int iy = iymax * 1 / 3; iy <= iymax; ++iy) 
-        {
-            for (int ix = ixmax * 1 / 2; ix <= ixmax * 3 / 4; ++ix) 
-            {
     //for (int slice = sliceStart; slice <= sliceFinish; ++slice)
     //{
-    //    for (int iy = iymin; iy <= iymax; ++iy)
+    //    for (int iy = iymax * 1 / 3; iy <= iymax; ++iy) 
     //    {
-    //        for (int ix = ixmin; ix <= ixmax; ++ix)
+    //        for (int ix = ixmax * 1 / 3; ix <= ixmax * 3 / 4; ++ix) 
     //        {
+#pragma omp parallel for
+    for (int slice = sliceStart; slice <= sliceFinish; ++slice)
+    {
+        for (int iy = iymin; iy <= iymax; ++iy)
+        {
+            for (int ix = ixmin; ix <= ixmax; ++ix)
+            {
                 if (voxelSet.voxelAt(slice, ix, iy) == 0)
                     continue;
+
+                std::map<Voxel, int> vertexIndices;
+                std::vector<int> ind;
+                ind.reserve(3);
 
                 // Enumeration of cube vertices and faces:
                 //        7         6
@@ -805,6 +809,7 @@ void Triangulate_Custom(
                 //   0  bottom   1
 
                 const Voxel cube(slice, ix, iy);
+
                 R3Point cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter;
                 InitializeNeighboursCentres(cube, origin, dx, dy, dz,
                     cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter);
@@ -825,8 +830,6 @@ void Triangulate_Custom(
 
                 for (const auto& face : faces)
                 {
-                    std::vector<int> ind;
-                    ind.reserve(3);
                     int i = 0, j = 0, k = 0, l = 0;
                     InitializeVertexNumbers(face, i, j, k, l);
 

@@ -16,6 +16,7 @@ void Taubin(Triangulation& t, std::map<int, std::set<int>>& neighbours, double l
 
 void Update(Triangulation& t, std::map<int, std::set<int>>& neighbours, double factor)
 {
+#pragma omp parallel for 
 	for (int i = 0; i < t.vertices.size(); ++i)
 	{
 		double weight = 1. / neighbours[i].size();

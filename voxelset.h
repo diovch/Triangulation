@@ -295,11 +295,11 @@ double detectVoxelSet(
 );
 
 double detectVoxelSetFromCta(
-    short (*f)(const Voxel&, short* pointer),
     double threshold,
     const VoxelBox& voxelBox,
     const Voxel& seed,
     short* pointer,
+    unsigned char* mask_pointer,
     VoxelSet& voxelSet
 );
 
@@ -402,4 +402,9 @@ Voxel RightHandNeighbour(const Voxel& bug, const DirectionOfMovement& direction)
 
 void TurnLeft(DirectionOfMovement& direction);
 
+Voxel SearchSeed(short*, unsigned char*, int, VoxelBox&);
+
+short VoxelDensity(const Voxel&, short*);
+
+unsigned char VoxelType(const Voxel&, unsigned char*);
 #endif
