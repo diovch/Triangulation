@@ -12,8 +12,8 @@
 #include <fstream>
 #include <algorithm>
 
-short VoxelDensity(const Voxel&, short*);
-Voxel SearchSeed(short*, int, VoxelBox&);
+
+Voxel SearchSeed(short*, unsigned char* , unsigned char , int, VoxelBox&);
 void WriteStlASCII(const Triangulation&, std::ofstream&);
 
 int main(int argc, char* argv[])
@@ -21,43 +21,59 @@ int main(int argc, char* argv[])
 	if (0) // 6 necessary arguments
 	{
 		std::cerr << "Usage: " << std::endl;
-		std::cerr << argv[0] << " -i head_cta.nii -s sigma -t threshold" << std::endl;
+		std::cerr << argv[0] << " -i inputFileName.nii -m maskFileName.nii -l maskLabel -s sigma -t threshold" << std::endl;
 		return EXIT_FAILURE;
 	}
 
 	const char* inputFileName = "";
+	const char* maskFileName = "";
+	unsigned char maskLabel{};
 	char* outputFileName = "";
 	short threshold = 0;
 	double sigma = 0.;
 
 	for (int i = 1; i < argc; ++i) {
-		auto parametr = std::string(argv[i]);
-		if (parametr == "-i") {
+		auto parameter = std::string(argv[i]);
+		if (parameter == "-i") {
 			inputFileName = argv[++i];
 			continue;
 		}
-		else if (parametr == "-t") {
+		else if (parameter == "-t") {
 			threshold = std::stod(argv[++i]);
 			continue;
 		}
-		else if (parametr == "-o") {
+		else if (parameter == "-m") {
+			maskFileName = argv[++i];
+			continue;
+		}
+		else if (parameter == "-o") {
 			outputFileName = argv[++i];
 			continue;
 		}
-		else if (parametr == "-s")
+		else if (parameter == "-s")
 		{
 			sigma = std::atof(argv[++i]);
+			continue;
+		}
+		else if (parameter == "-l")
+		{
+			maskLabel = std::atoi(argv[++i]);
 			continue;
 		}
 	}
 	constexpr unsigned int Dimension = 3;
 	using PixelType = short;
 	using ImageType = itk::Image<PixelType, Dimension>;
+	using MaskType = itk::Image<unsigned char, Dimension>;
 	using ReaderType = itk::ImageFileReader<ImageType>;
+	using ReaderMaskType = itk::ImageFileReader<MaskType>;
 	ReaderType::Pointer reader = ReaderType::New();
+	ReaderMaskType::Pointer mask_reader = ReaderMaskType::New();
 
 	reader->SetFileName(inputFileName);
 	reader->Update();
+	mask_reader->SetFileName(maskFileName);
+	mask_reader->Update();
 
 	auto image = reader->GetOutput();
 
@@ -88,6 +104,7 @@ int main(int argc, char* argv[])
 	}
 	
 	auto pointer = image->GetBufferPointer();
+	auto mask_pointer = (mask_reader->GetOutput())->GetBufferPointer();
 
 	auto region = image->GetBufferedRegion();
 	auto size = region.GetSize();
@@ -97,21 +114,21 @@ int main(int argc, char* argv[])
 	auto x_sc = scale[0], y_sc = scale[1], z_sc = scale[2];
 
 	VoxelBox voxelBoxOfImage(Voxel (0, (0,0)), xMax, yMax, MaxSlices); 
-	Voxel seed = SearchSeed(pointer, threshold, voxelBoxOfImage);
+	Voxel seed = SearchSeed(pointer, mask_pointer, maskLabel, threshold, voxelBoxOfImage);
 	VoxelSet voxelSet;
 	
 	detectVoxelSetFromCta(
-		(*VoxelDensity),
 		threshold,
 		voxelBoxOfImage,
 		seed,
 		pointer,
+		mask_pointer,
+		maskLabel,
 		voxelSet);
 	
 	if(0)
 		FillVoids(voxelSet);
 
-	ContourSegmentation(voxelSet, seed);
 	
 	Triangulation triangulation;
 	std::map<int, std::set<int>> VertexNeighbours;
@@ -136,8 +153,8 @@ int main(int argc, char* argv[])
 	
 	
 
-	if (0)
-		Taubin(triangulation, VertexNeighbours, 0.33, -0.331, 25);
+	if (1)
+		Taubin(triangulation, VertexNeighbours, 0.33, -0.331, 15);
 	//else
 	//	triangulation.taubinSmoothing(1, 0.33, 0.331, false);
 	
@@ -150,33 +167,28 @@ int main(int argc, char* argv[])
 	return EXIT_SUCCESS;
 }
 
-short VoxelDensity(const Voxel& v, short* p) {// поменять тип функции на short
-	auto VoxelPointer = p + (v.point.x + v.point.y * 512 + v.slice * 512 * 512);
-	return *VoxelPointer;
-}
 
-Voxel SearchSeed(short* pointer, int threshold, VoxelBox& voxelBox) {
+
+
+Voxel SearchSeed(short* pointer, unsigned char* mask_pointer, unsigned char maskLabel, int threshold, VoxelBox& voxelBox) 
+{
 	Voxel seed;
 	int num_seed = 0;
 	int xMax = voxelBox.width, yMax = voxelBox.depth, MaxSlices = voxelBox.height;
 	
-	int aortaX = 278, aortaY = 239, aortaZ = 436;
-	auto voxel = pointer + (aortaX + aortaY * xMax + aortaZ * xMax * yMax);
-	if (*voxel > threshold) 
+	for (int k = MaxSlices * 1 / 5; k < MaxSlices * 4 / 5; ++k)
 	{
-		seed = { aortaZ, {aortaX, aortaY} };
-		return seed;
-	}
-
-	for (int k = MaxSlices * 3 / 8; k < MaxSlices * 4 / 8; ++k) {
-		for (int i = xMax * 4 / 10; i < xMax * 5 / 10; ++i) {
-			for (int j = yMax * 4 / 10; j < yMax * 5 / 10; ++j) {
+		for (int i = xMax * 1 / 5; i < xMax * 4 / 5; ++i)
+		{
+			for (int j = yMax * 1 / 5; j < yMax * 4 / 5; ++j)
+			{
 	//for (int k = 0; k < MaxSlices; ++k) {
 	//	for (int i = 0; i < xMax; ++i) {
 	//		for (int j = 0; j < yMax; ++j) {
 				auto voxel = pointer + (i + j * xMax + k * xMax * yMax);
-				if (*voxel > threshold) {
-				
+				auto isROI = mask_pointer + (i + j * xMax + k * xMax * yMax);
+				if (*voxel > threshold && *isROI == maskLabel)
+				{
 					seed = { k, {i, j} };
 					return seed;
 				}

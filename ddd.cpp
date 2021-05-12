@@ -75,11 +75,12 @@ double detectVoxelSet(
 
 // my realization with image pointer
 double detectVoxelSetFromCta(
-    short (*f)(const Voxel&, short* pointer),
     double threshold,
     const VoxelBox& voxelBox,
     const Voxel& seed,
     short* pointer,
+    unsigned char* mask_pointer,
+    unsigned char maskLabel,
     VoxelSet& voxelSet
 ) {
     int sliceStart = voxelBox.origin.slice;
@@ -92,7 +93,7 @@ double detectVoxelSetFromCta(
     if (seed.slice < sliceStart || seed.slice > sliceFinish)
         return 0.;
 
-    if ((*f)(seed, pointer) < threshold)
+    if (VoxelDensity(seed, pointer) < threshold || VoxelType(seed, mask_pointer) != maskLabel)
         return 0.;
 
     std::deque<Voxel> deq;
@@ -114,8 +115,8 @@ double detectVoxelSetFromCta(
             if (voxelSet.voxelAt(n) != 0)
                 continue;   // Voxel is already in the set
 
-            short v = (*f)(n, pointer);
-            if (v < threshold)
+            
+            if (VoxelDensity(n, pointer) < threshold || VoxelType(n, mask_pointer) != maskLabel)
                 continue;
             voxelSet.addVoxel(n, ROI_POSITIVE);
             deq.push_back(n);
@@ -363,4 +364,17 @@ void TurnLeft(DirectionOfMovement& direction)
     {
         direction = Y_POSITIVE;
     }
+}
+
+unsigned char VoxelType(const Voxel& v, unsigned char* p)
+{
+    auto VoxelPointer = p + (v.point.x + v.point.y * 512 + v.slice * 512 * 512);
+    return *VoxelPointer;
+}
+
+
+short VoxelDensity(const Voxel& v, short* p)
+{
+    auto VoxelPointer = p + (v.point.x + v.point.y * 512 + v.slice * 512 * 512);
+    return *VoxelPointer;
 }

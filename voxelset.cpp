@@ -775,18 +775,18 @@ void Triangulate_Custom(
     std::map<Voxel, int> vertexIndices;
     std::vector<int> ind;
 
+    //for (int slice = sliceFinish * 1 / 2; slice <= sliceFinish; ++slice)
+    //{
+    //    for (int iy = iymax * 1 / 3; iy <= iymax; ++iy) 
+    //    {
+    //        for (int ix = ixmax * 1 / 2; ix <= ixmax * 3 / 4; ++ix) 
+    //        {
     for (int slice = sliceStart; slice <= sliceFinish; ++slice)
     {
-        for (int iy = iymax * 1 / 3; iy <= iymax; ++iy) 
+        for (int iy = iymin; iy <= iymax; ++iy)
         {
-            for (int ix = ixmax * 1 / 2; ix <= ixmax * 3 / 4; ++ix) 
+            for (int ix = ixmin; ix <= ixmax; ++ix)
             {
-    //for (int slice = sliceStart; slice <= sliceFinish; ++slice)
-    //{
-    //    for (int iy = iymin; iy <= iymax; ++iy)
-    //    {
-    //        for (int ix = ixmin; ix <= ixmax; ++ix)
-    //        {
                 if (voxelSet.voxelAt(slice, ix, iy) == 0)
                     continue;
 
@@ -850,8 +850,8 @@ void Triangulate_Custom(
 
 
                         Voxel extendedNeighbour(
-                            2*(cube.slice + Voxel::FACE_DIRECTIONS[face][0]),
-                            2*(cube.point.x + Voxel::FACE_DIRECTIONS[face][1]),
+                            2 * (cube.slice + Voxel::FACE_DIRECTIONS[face][0]),
+                            2 * (cube.point.x + Voxel::FACE_DIRECTIONS[face][1]),
                             2 * (cube.point.y + Voxel::FACE_DIRECTIONS[face][2])
                         );
                         R3Point neighbourCenter;
