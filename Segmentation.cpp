@@ -16,9 +16,10 @@ std::vector<std::set<Triangulation::Triangle>> Segmentation(Triangulation& t, st
 	
 	std::map<int, std::set<int>> TriangleEdgeNeighbours;
 
-	// Fill TriangleEdgeNeighbours from t.triangles and Vertexneighbours
-	Fill(TriangleEdgeNeighbours, t.triangles, Vertexneighbours);
 	
+	Fill(TriangleEdgeNeighbours, t.triangles, Vertexneighbours);
+	Research(TriangleEdgeNeighbours, t);
+
 	ConnectedSpaces = DequeAlgo(t.triangles, TriangleEdgeNeighbours);
 	
 	return ConnectedSpaces;
@@ -29,33 +30,33 @@ void Fill(std::map<int, std::set<int>>& TriangleEdgeNeighbours,
 {
 	for (int TrianInd = 0; TrianInd < triangles.size(); ++TrianInd)
 	{
-		if (TriangleEdgeNeighbours[TrianInd].size() == 3) // Triangle doesn't have more than 3 edge neighbours
-			continue;
+		//if (TriangleEdgeNeighbours[TrianInd].size() == 3) // Triangle doesn't have more than 3 edge neighbours
+		//	continue;
 
-		for (int i = 0; i < 3; ++i)
+		for (int VertexInd = 0; VertexInd < 3; ++VertexInd)
 		{
 			Triangulation::Triangle& triangle = triangles[TrianInd];
 
-			int e1 = triangle.indices[i];// edge verticies
-			int e2 = triangle.indices[(i + 1) % 3];
+			int Vertex1 = triangle.indices[VertexInd];
+			int Vertex2 = triangle.indices[(VertexInd + 1) % 3];
 
-			int other = triangle.indices[(i + 2) % 3];// other vertex in triangle
+			int OtherVertex = triangle.indices[(VertexInd + 2) % 3];
 
-			std::set<int>& e1Neighbours = Vertexneighbours[e1];
-			std::set<int>& e2Neighbours = Vertexneighbours[e2];
+			std::set<int>& Vertex1Neighbours = Vertexneighbours[Vertex1];
+			std::set<int>& Vertex2Neighbours = Vertexneighbours[Vertex2];
 
-			std::vector<int> intersection;
+			std::vector<int> CommonNeighbours;
 
-			// common neighbours for e1 and e2
-			std::set_intersection(e1Neighbours.begin(), e1Neighbours.end(),
-				e2Neighbours.begin(), e2Neighbours.end(), std::back_inserter(intersection));
+			
+			std::set_intersection(Vertex1Neighbours.begin(), Vertex1Neighbours.end(),
+				Vertex2Neighbours.begin(), Vertex2Neighbours.end(), std::back_inserter(CommonNeighbours));
 
-			for (const auto& EdgeNeighbour : intersection)
+			for (const auto& EdgeNeighbour : CommonNeighbours)
 			{
-				if (EdgeNeighbour != other) // is a vertex from another triangle found?
+				if (EdgeNeighbour != OtherVertex)
 				{
 					auto it = std::find(triangles.begin(), triangles.end(),
-						Triangulation::Triangle(e1, e2, EdgeNeighbour)); // t.triangles has sorted by indicies
+						Triangulation::Triangle(Vertex1, Vertex2, EdgeNeighbour)); // t.triangles has sorted by indicies
 					int ind = it - triangles.begin();
 					TriangleEdgeNeighbours[TrianInd].insert(ind);
 					TriangleEdgeNeighbours[ind].insert(TrianInd);
@@ -69,42 +70,56 @@ std::vector<std::set<Triangulation::Triangle>> DequeAlgo(std::vector<Triangulati
 	std::map<int, std::set<int>>& TriangleEdgeNeighbours)
 {
 	std::vector<std::set<Triangulation::Triangle>> ConnectedSpaces;
-	int NumberOfConnctedSpaces = 0;
+	int NumberOfConnectedSpaces = 0;
 	//	list of considered triangles
-	std::vector<bool> added(triangles.size(), false);
+	std::vector<bool> IsConsidered(triangles.size(), false);
 	for (int TrianInd = 0; TrianInd < triangles.size(); ++TrianInd)
 	{
-		if (added[TrianInd] == true)
+		if (IsConsidered[TrianInd] == true)
 			continue;
-		added[TrianInd] = true; // triagle with number TrianInd is considered
+		IsConsidered[TrianInd] = true; 
 
-		std::deque<Triangulation::Triangle> deq;
+		std::deque<Triangulation::Triangle> TriangleQueue;
 		Triangulation::Triangle& triangle = triangles[TrianInd];
 
-		deq.push_back(triangle);
-		ConnectedSpaces.push_back(std::set<Triangulation::Triangle>{});
-		ConnectedSpaces[NumberOfConnctedSpaces].insert(triangle);
+		TriangleQueue.push_back(triangle);
+		ConnectedSpaces.push_back(std::set<Triangulation::Triangle>{});// it requires initialization for further set insertion
+		ConnectedSpaces[NumberOfConnectedSpaces].insert(triangle);
 
-		while (!deq.empty())
+		while (!TriangleQueue.empty())
 		{
-			Triangulation::Triangle& current = deq.front();
-			deq.pop_front();
+			Triangulation::Triangle& CurrentTriangle = TriangleQueue.front();
+			TriangleQueue.pop_front();
 
-			auto it = std::find(triangles.begin(), triangles.end(), current); // t.triangles has sorted by indicies
+			auto it = std::find(triangles.begin(), triangles.end(), CurrentTriangle); // t.triangles has sorted by indicies
 			int ind = it - triangles.begin();
-			std::vector<int> neighbours(TriangleEdgeNeighbours[ind].begin(), TriangleEdgeNeighbours[ind].end());
+			std::vector<int> TriangleNeighbours(TriangleEdgeNeighbours[ind].begin(), TriangleEdgeNeighbours[ind].end()); //coping
 
-			for (int i = 0; i < neighbours.size(); ++i)
+			for (int i = 0; i < TriangleNeighbours.size(); ++i)
 			{
-				if (added[neighbours[i]] == true)
+				if (IsConsidered[TriangleNeighbours[i]] == true)
 					continue;
-				added[neighbours[i]] = true;
-				deq.push_back(triangles[neighbours[i]]);
-				ConnectedSpaces[NumberOfConnctedSpaces].insert(triangles[neighbours[i]]);
+				IsConsidered[TriangleNeighbours[i]] = true;
+				TriangleQueue.push_back(triangles[TriangleNeighbours[i]]);
+				ConnectedSpaces[NumberOfConnectedSpaces].insert(triangles[TriangleNeighbours[i]]);
 			}
 		}
-
-		NumberOfConnctedSpaces++;
+		NumberOfConnectedSpaces++;
 	}
 	return ConnectedSpaces;
+}
+
+void Research(std::map<int, std::set<int>>& neighbours, Triangulation& t)
+{
+	std::map<int, std::set<int>> slice;
+	for (auto& x : neighbours)
+	{
+		if (x.second.size() > 3)
+		{
+			slice[x.first] = x.second;
+		}
+	}
+
+	//for(auto& x)
+	return;
 }

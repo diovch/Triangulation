@@ -7,3 +7,5 @@ void Fill(std::map<int, std::set<int>>&, std::vector<Triangulation::Triangle>&, 
 
 std::vector<std::set<Triangulation::Triangle>> DequeAlgo(std::vector<Triangulation::Triangle>&, 
 														std::map<int, std::set<int>>&);
+
+void Research(std::map<int, std::set<int>>& neighbours,Triangulation& t);
