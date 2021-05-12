@@ -3,13 +3,11 @@
 
 #include <vector>
 #include <cassert>
-//#include <QDataStream>
 #include <fstream>
 #include "matrix.h"
 #include "r2geom.h"
 
-class QDataStream;
-
+// ROI = Region of interest
 const int ROI_POSITIVE_BIT = 1; // Positive mask
 const int ROI_NEGATIVE_BIT = 2; // Negative mask
 

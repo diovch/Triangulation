@@ -1840,7 +1840,7 @@ R3Vector Triangulation::uniformLaplace(int vertexIdx) const {
     return centroid - t;
 }
 // TODO : Implement Skala mesh at surface voxels
-void Triangulation::TriangulationOfTetrahedron(R3Graph::Tetrahedron& tetrahedron)
+void Triangulation::TriangulationOfTetrahedron(R3Graph::DensityTetrahedron& tetrahedron)
 {
     std::vector<int> TriangleIndices;
     TriangleIndices.clear();
@@ -1850,11 +1850,10 @@ void Triangulation::TriangulationOfTetrahedron(R3Graph::Tetrahedron& tetrahedron
     {
         double thrfun1 = tetrahedron.edges[i].A.second;
         double thrfun2 = tetrahedron.edges[i].B.second;
-        if (thrfun1 * thrfun2 < 0.)
+        if (thrfun1 * thrfun2 < 0. || fabs(thrfun1) < R3_EPSILON || fabs(thrfun2) < R3_EPSILON)
         {
             if (tetrahedron.edges[i].index == 0)
             {
-
                 R3Point v = tetrahedron.edges[i].PointOnEdge();
                 vertices.push_back(v);
 
@@ -1866,7 +1865,6 @@ void Triangulation::TriangulationOfTetrahedron(R3Graph::Tetrahedron& tetrahedron
                 // vertex has already computed
                 TriangleIndices.push_back(tetrahedron.edges[i].index);
             }
-            EdgesWithPoints.insert(i);
         }
     }
     // Add triangles
@@ -1896,3 +1894,4 @@ void Triangulation::TriangulationOfTetrahedron(R3Graph::Tetrahedron& tetrahedron
         triangles.push_back(t2);
     }
 }
+

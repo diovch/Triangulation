@@ -18,7 +18,7 @@ public:
     class Triangle {
     public:
         int indices[3];
-        R3Graph::R3Vector Normal;
+        R3Graph::R3Vector Normal; 
         //??? int adjacentTriangles[3];
 
         /*Triangle(int i0, int i1, int i2) {
@@ -428,7 +428,7 @@ public:
 
     bool save(const char *path) const;
     bool load(const char *path);
-    void TriangulationOfTetrahedron(R3Graph::Tetrahedron& tetrahedron);
+    void TriangulationOfTetrahedron(R3Graph::DensityTetrahedron& tetrahedron);
 
     void computeVertexRing(
         int vertexIdx, VertexRing& vertexRing
