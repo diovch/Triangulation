@@ -118,6 +118,7 @@ double detectVoxelSetFromCta(
             
             if (VoxelDensity(n, pointer) < threshold || VoxelType(n, mask_pointer) != maskLabel)
                 continue;
+
             voxelSet.addVoxel(n, ROI_POSITIVE);
             deq.push_back(n);
             num += 1.;

@@ -790,6 +790,10 @@ void Triangulate_Custom(
                 if (voxelSet.voxelAt(slice, ix, iy) == 0)
                     continue;
 
+                std::map<Voxel, int> vertexIndices;
+                std::vector<int> ind;
+                ind.reserve(3);
+
                 // Enumeration of cube vertices and faces:
                 //        7         6
                 //       +---------+          z
@@ -805,6 +809,7 @@ void Triangulate_Custom(
                 //   0  bottom   1
 
                 const Voxel cube(slice, ix, iy);
+
                 R3Point cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter;
                 InitializeNeighboursCentres(cube, origin, dx, dy, dz,
                     cubeCenter, bottomCenter, topCenter, leftCenter, rightCenter, frontCenter, backCenter);
@@ -825,8 +830,6 @@ void Triangulate_Custom(
 
                 for (const auto& face : faces)
                 {
-                    std::vector<int> ind;
-                    ind.reserve(3);
                     int i = 0, j = 0, k = 0, l = 0;
                     InitializeVertexNumbers(face, i, j, k, l);
 

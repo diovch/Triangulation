@@ -1,16 +1,13 @@
 #include "itkImage.h"
 #include "itkImageFileReader.h"
 #include "itkRecursiveGaussianImageFilter.h"
-//#include "itkSTLMeshIO.h"
+
 #include "voxelset.h"
 #include "Triangulation.h"
 #include "R3Graph.h"
 #include "Taubin.h"
 #include "Segmentation.h"
 #include "STL.h"
-#include <iostream>
-#include <fstream>
-#include <algorithm>
 
 
 Voxel SearchSeed(short*, unsigned char* , unsigned char , int, VoxelBox&);
@@ -30,6 +27,7 @@ int main(int argc, char* argv[])
 	unsigned char maskLabel{};
 	char* outputFileName = "";
 	short threshold = 0;
+	const char* maskFileName = "";
 	double sigma = 0.;
 
 	for (int i = 1; i < argc; ++i) {
@@ -63,6 +61,7 @@ int main(int argc, char* argv[])
 	}
 	constexpr unsigned int Dimension = 3;
 	using PixelType = short;
+
 	using ImageType = itk::Image<PixelType, Dimension>;
 	using MaskType = itk::Image<unsigned char, Dimension>;
 	using ReaderType = itk::ImageFileReader<ImageType>;
@@ -70,12 +69,16 @@ int main(int argc, char* argv[])
 	ReaderType::Pointer reader = ReaderType::New();
 	ReaderMaskType::Pointer mask_reader = ReaderMaskType::New();
 
+	
+	using MaskType = itk::Image<unsigned char, Dimension>;
+	using ReaderMaskType = itk::ImageFileReader<MaskType>;
+	ReaderMaskType::Pointer mask_reader = ReaderMaskType::New();
+
 	reader->SetFileName(inputFileName);
 	reader->Update();
 	mask_reader->SetFileName(maskFileName);
 	mask_reader->Update();
 
-	auto image = reader->GetOutput();
 
 	if (1)
 	{
@@ -162,7 +165,6 @@ int main(int argc, char* argv[])
 
 	std::string filename = "IsoSurface.stl";
 	WriteStlASCII(triangulation, filename);
-	
 
 	return EXIT_SUCCESS;
 }
