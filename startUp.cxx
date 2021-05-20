@@ -29,7 +29,8 @@ int main(int argc, char* argv[])
 	short threshold = 0;
 	double sigma = 0.;
 
-	for (int i = 1; i < argc; ++i) {
+	for (int i = 1; i < argc; ++i) 
+	{
 		auto parameter = std::string(argv[i]);
 		if (parameter == "-i") 
 		{
@@ -77,9 +78,6 @@ int main(int argc, char* argv[])
 	mask_reader->SetFileName(maskFileName);
 	mask_reader->Update();
 
-
-	reader->SetFileName(inputFileName);
-	reader->Update();
 	using FilterType = itk::RecursiveGaussianImageFilter<ImageType, ImageType>;
 	FilterType::Pointer smoothFilterX = FilterType::New();
 	FilterType::Pointer smoothFilterY = FilterType::New();
@@ -101,7 +99,6 @@ int main(int argc, char* argv[])
 
 	auto image = smoothFilterZ->GetOutput();
 
-	
 	auto pointer = image->GetBufferPointer();
 	auto mask_pointer = (mask_reader->GetOutput())->GetBufferPointer();
 
@@ -127,7 +124,6 @@ int main(int argc, char* argv[])
 	
 	if(0)
 		FillVoids(voxelSet);
-
 	
 	Triangulation triangulation;
 	std::map<int, std::set<int>> VertexNeighbours;
@@ -149,7 +145,6 @@ int main(int argc, char* argv[])
 			{ 0,0,0 },
 			x_sc, y_sc, z_sc
 		);
-	
 	
 
 	if (1)
