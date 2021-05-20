@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 	if (0) // 6 necessary arguments
 	{
 		std::cerr << "Usage: " << std::endl;
-		std::cerr << argv[0] << " -i inputFileName.nii -m maskFileName.nii -l maskLabel -s sigma -t threshold" << std::endl;
+		std::cerr << argv[0] << " -i inputFileName.nii -m maskFileName.nii -l maskLabel -s sigma -t threshold -o outputFileName.stl" << std::endl;
 		return EXIT_FAILURE;
 	}
 
@@ -27,24 +27,27 @@ int main(int argc, char* argv[])
 	unsigned char maskLabel{};
 	char* outputFileName = "";
 	short threshold = 0;
-	const char* maskFileName = "";
 	double sigma = 0.;
 
 	for (int i = 1; i < argc; ++i) {
 		auto parameter = std::string(argv[i]);
-		if (parameter == "-i") {
+		if (parameter == "-i") 
+		{
 			inputFileName = argv[++i];
 			continue;
 		}
-		else if (parameter == "-t") {
+		else if (parameter == "-t") 
+		{
 			threshold = std::stod(argv[++i]);
 			continue;
 		}
-		else if (parameter == "-m") {
+		else if (parameter == "-m") 
+		{
 			maskFileName = argv[++i];
 			continue;
 		}
-		else if (parameter == "-o") {
+		else if (parameter == "-o") 
+		{
 			outputFileName = argv[++i];
 			continue;
 		}
@@ -69,42 +72,35 @@ int main(int argc, char* argv[])
 	ReaderType::Pointer reader = ReaderType::New();
 	ReaderMaskType::Pointer mask_reader = ReaderMaskType::New();
 
-	
-	using MaskType = itk::Image<unsigned char, Dimension>;
-	using ReaderMaskType = itk::ImageFileReader<MaskType>;
-	ReaderMaskType::Pointer mask_reader = ReaderMaskType::New();
-
 	reader->SetFileName(inputFileName);
 	reader->Update();
 	mask_reader->SetFileName(maskFileName);
 	mask_reader->Update();
 
 
-	if (1)
-	{
-		reader->SetFileName(inputFileName);
-		reader->Update();
-		using FilterType = itk::RecursiveGaussianImageFilter<ImageType, ImageType>;
-		FilterType::Pointer smoothFilterX = FilterType::New();
-		FilterType::Pointer smoothFilterY = FilterType::New();
-		FilterType::Pointer smoothFilterZ = FilterType::New();
-		smoothFilterX->SetDirection(0);
-		smoothFilterY->SetDirection(1);
-		smoothFilterZ->SetDirection(2);
-		smoothFilterX->SetOrder(itk::GaussianOrderEnum::ZeroOrder);
-		smoothFilterY->SetOrder(itk::GaussianOrderEnum::ZeroOrder);
-		smoothFilterZ->SetOrder(itk::GaussianOrderEnum::ZeroOrder);
-		smoothFilterX->SetNormalizeAcrossScale(true);
-		smoothFilterY->SetNormalizeAcrossScale(true);
-		smoothFilterZ->SetNormalizeAcrossScale(true);
-		smoothFilterX->SetInput(reader->GetOutput());
-		smoothFilterY->SetInput(smoothFilterX->GetOutput());
-		smoothFilterZ->SetInput(smoothFilterY->GetOutput());
-		smoothFilterX->SetSigma(sigma); smoothFilterY->SetSigma(sigma); smoothFilterZ->SetSigma(sigma);
-		smoothFilterZ->Update();
+	reader->SetFileName(inputFileName);
+	reader->Update();
+	using FilterType = itk::RecursiveGaussianImageFilter<ImageType, ImageType>;
+	FilterType::Pointer smoothFilterX = FilterType::New();
+	FilterType::Pointer smoothFilterY = FilterType::New();
+	FilterType::Pointer smoothFilterZ = FilterType::New();
+	smoothFilterX->SetDirection(0);
+	smoothFilterY->SetDirection(1);
+	smoothFilterZ->SetDirection(2);
+	smoothFilterX->SetOrder(itk::GaussianOrderEnum::ZeroOrder);
+	smoothFilterY->SetOrder(itk::GaussianOrderEnum::ZeroOrder);
+	smoothFilterZ->SetOrder(itk::GaussianOrderEnum::ZeroOrder);
+	smoothFilterX->SetNormalizeAcrossScale(true);
+	smoothFilterY->SetNormalizeAcrossScale(true);
+	smoothFilterZ->SetNormalizeAcrossScale(true);
+	smoothFilterX->SetInput(reader->GetOutput());
+	smoothFilterY->SetInput(smoothFilterX->GetOutput());
+	smoothFilterZ->SetInput(smoothFilterY->GetOutput());
+	smoothFilterX->SetSigma(sigma); smoothFilterY->SetSigma(sigma); smoothFilterZ->SetSigma(sigma);
+	smoothFilterZ->Update();
 
-		auto image = smoothFilterZ->GetOutput();
-	}
+	auto image = smoothFilterZ->GetOutput();
+
 	
 	auto pointer = image->GetBufferPointer();
 	auto mask_pointer = (mask_reader->GetOutput())->GetBufferPointer();
@@ -157,13 +153,15 @@ int main(int argc, char* argv[])
 	
 
 	if (1)
-		Taubin(triangulation, VertexNeighbours, 0.33, -0.331, 15);
-	//else
-	//	triangulation.taubinSmoothing(1, 0.33, 0.331, false);
-	
-	//std::vector<std::set<Triangulation::Triangle>> s = Segmentation(triangulation, VerxteNeighbours);
+		Taubin(triangulation, VertexNeighbours, 0.33, -0.331, 10);
 
-	std::string filename = "IsoSurface.stl";
+	std::string filename = "";
+
+	if (outputFileName == "")
+		filename = "IsoSurface.stl";
+	else
+		filename = outputFileName;
+
 	WriteStlASCII(triangulation, filename);
 
 	return EXIT_SUCCESS;
@@ -178,15 +176,15 @@ Voxel SearchSeed(short* pointer, unsigned char* mask_pointer, unsigned char mask
 	int num_seed = 0;
 	int xMax = voxelBox.width, yMax = voxelBox.depth, MaxSlices = voxelBox.height;
 	
-	for (int k = MaxSlices * 1 / 5; k < MaxSlices * 4 / 5; ++k)
-	{
-		for (int i = xMax * 1 / 5; i < xMax * 4 / 5; ++i)
-		{
-			for (int j = yMax * 1 / 5; j < yMax * 4 / 5; ++j)
-			{
-	//for (int k = 0; k < MaxSlices; ++k) {
-	//	for (int i = 0; i < xMax; ++i) {
-	//		for (int j = 0; j < yMax; ++j) {
+	//for (int k = MaxSlices * 1 / 10; k < MaxSlices * 9 / 10; ++k)
+	//{
+	//	for (int i = xMax * 1 / 10; i < xMax * 9 / 10; ++i)
+	//	{
+	//		for (int j = yMax * 1 / 10; j < yMax * 9 / 10; ++j)
+	//		{
+	for (int k = 0; k < MaxSlices; ++k) {
+		for (int i = 0; i < xMax; ++i) {
+			for (int j = 0; j < yMax; ++j) {
 				auto voxel = pointer + (i + j * xMax + k * xMax * yMax);
 				auto isROI = mask_pointer + (i + j * xMax + k * xMax * yMax);
 				if (*voxel > threshold && *isROI == maskLabel)

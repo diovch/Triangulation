@@ -904,8 +904,11 @@ void Triangulate_Custom(
                             )
                         );
                         InitializeNormal_Custom(face, triangulation.triangles.back().Normal);
-                        ind = { indices[i], indices[j], indices[8] };
-                        FillNeighbours(VerxteNeighbours, ind);
+                        {
+                            std::vector<int> ind = { indices[i], indices[j], indices[8] };
+                            FillNeighbours(VerxteNeighbours, ind);
+                        }
+                        
 
                         // 2
                         triangulation.triangles.push_back(
@@ -914,8 +917,11 @@ void Triangulate_Custom(
                             )
                         );
                         InitializeNormal_Custom(face, triangulation.triangles.back().Normal);
-                        ind = { indices[j], indices[k], indices[8] };
-                        FillNeighbours(VerxteNeighbours, ind);
+                        
+                        {
+                            std::vector<int> ind2 = { indices[j], indices[k], indices[8] };
+                            FillNeighbours(VerxteNeighbours, ind2);
+                        }
 
                         // 3
                         triangulation.triangles.push_back(
@@ -924,9 +930,10 @@ void Triangulate_Custom(
                             )
                         );
                         InitializeNormal_Custom(face, triangulation.triangles.back().Normal);
-                        ind = { indices[k], indices[l], indices[8] };
-                        FillNeighbours(VerxteNeighbours, ind);
-
+                        {
+                            std::vector<int> ind = { indices[k], indices[l], indices[8] };
+                            FillNeighbours(VerxteNeighbours, ind);
+                        }
                         // 4 
                         triangulation.triangles.push_back(
                             Triangulation::Triangle(
@@ -934,13 +941,12 @@ void Triangulate_Custom(
                             )
                         );
                         InitializeNormal_Custom(face, triangulation.triangles.back().Normal);
-                        ind = { indices[l], indices[i], indices[8] };
-                        FillNeighbours(VerxteNeighbours, ind);
-
-                        
+                        {
+                            std::vector<int> ind = { indices[l], indices[i], indices[8] };
+                            FillNeighbours(VerxteNeighbours, ind);
+                        }
                     }
                 }
-
             }
         }
     }

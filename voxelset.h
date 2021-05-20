@@ -92,7 +92,8 @@ public:
 
     // For given face, contains shifts in slice, x, y = -1, 0, 1
     static const int FACE_DIRECTIONS[6][3]; // Defined in "VoxelSet.cpp"
-    short VoxelDensity(short* p) const {
+    short VoxelDensity(short* p) const 
+    {
         auto VoxelPointer = p + (point.x + point.y * 512 + slice * 512 * 512);
         return *VoxelPointer;
     }

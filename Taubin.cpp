@@ -16,7 +16,9 @@ void Taubin(Triangulation& t, std::map<int, std::set<int>>& neighbours, double l
 
 void Update(Triangulation& t, std::map<int, std::set<int>>& neighbours, double factor)
 {
-#pragma omp parallel for 
+//#pragma omp parallel for 
+	std::vector<R3Graph::R3Vector> vertexBias(t.vertices.size(), { 0.,0.,0. });
+
 	for (int i = 0; i < t.vertices.size(); ++i)
 	{
 		double weight = 1. / neighbours[i].size();
@@ -24,9 +26,13 @@ void Update(Triangulation& t, std::map<int, std::set<int>>& neighbours, double f
 
 		for (const auto ind : neighbours[i])
 			average_vector += (t.vertices[ind].point - t.vertices[i].point) * weight;
+		vertexBias[i] = average_vector;
 
+	}
 
-		t.vertices[i].point += average_vector * factor;
+	for (int i = 0; i < t.vertices.size(); ++i)
+	{
+		t.vertices[i].point += vertexBias[i] * factor;
 	}
 }
 

@@ -2,7 +2,6 @@
 #include "Triangulation.h"
 #include <algorithm>
 #include <deque>
-//#include <set>
 #include <iterator>
 
 std::vector<std::set<Triangulation::Triangle>> Segmentation(Triangulation& t, std::map<int, std::set<int>>& Vertexneighbours)
@@ -13,7 +12,6 @@ std::vector<std::set<Triangulation::Triangle>> Segmentation(Triangulation& t, st
 	std::sort(t.triangles.begin(), t.triangles.end());
 
 	std::vector<std::set<Triangulation::Triangle>> ConnectedSpaces;
-	
 	std::map<int, std::set<int>> TriangleEdgeNeighbours;
 
 	

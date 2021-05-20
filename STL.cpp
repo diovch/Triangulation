@@ -48,7 +48,6 @@ void WriteSTLBinary(const Triangulation& triangulation, std::string& filename)
 void WriteStlASCII(const Triangulation& triangulation, std::string& filename)
 {
 	std::ofstream out;
-	filename = "C:\\Users\\owchi\\source\\repos\\TEST\\bin\\" + filename;
 	out.open(filename);
 	if (out.is_open())
 	{
