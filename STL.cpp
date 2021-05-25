@@ -7,21 +7,21 @@ void WriteSTLBinary(const Triangulation& triangulation, std::string& filename)
 {
 	std::ofstream out;
 	filename = "C:\\Users\\owchi\\source\\repos\\TEST\\bin\\" + filename;
-	out.open(filename, std::ofstream::binary);
+	out.open(filename, std::ios::out | std::ios::binary);
 	if (out.is_open())
 	{
-
+		
 		char header[80];
 		std::memset(header, 0, 80);
 		out.write(header, 80);
 
-		int numTriang = int(triangulation.triangles.size());
+		auto numTriang = triangulation.triangles.size();
 		out.write((const char*)(&numTriang), 4);
 
 
 		for (int i = 0; i < triangulation.triangles.size(); ++i)
 		{
-			Triangulation::Triangle t = triangulation.triangles.at(i);
+			const Triangulation::Triangle& t = triangulation.triangles.at(i);
 			
 			R3Graph::R3Point p[4];
 			p[0] = triangulation.vertices.at(t.indices[0]).point;
@@ -35,10 +35,12 @@ void WriteSTLBinary(const Triangulation& triangulation, std::string& filename)
 				vec[0] = (float) p[i].x;
 				vec[1] = (float) p[i].y;
 				vec[2] = (float) p[i].z;
-				out.write((const char*) vec, 12);
+				out.write((const char*)&vec[0], 4);
+				out.write((const char*)&vec[1], 4);
+				out.write((const char*)&vec[2], 4);
 			}
 		
-			unsigned short dummy = 48;
+			unsigned short dummy = 0;
 			out.write((const char*)&dummy, 2);
 		}
 	}
@@ -53,7 +55,8 @@ void WriteStlASCII(const Triangulation& triangulation, std::string& filename)
 	{
 		out << "solid iso" << std::endl;
 
-		for (int i = 0; i < triangulation.triangles.size(); ++i) {
+		for (int i = 0; i < triangulation.triangles.size(); ++i) 
+		{
 			out << "    " << "facet normal ";
 
 			Triangulation::Triangle t = triangulation.triangles.at(i);

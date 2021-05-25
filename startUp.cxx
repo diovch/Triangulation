@@ -129,9 +129,8 @@ int main(int argc, char* argv[])
 	std::map<int, std::set<int>> VertexNeighbours;
 	
 	if (0)
-		computeTriangulationOfVoxelSet_MY(
-			pointer,
-			threshold,
+		computeTriangulationOfVoxelSet(
+			VertexNeighbours,
 			triangulation,
 			voxelSet,
 			{ 0,0,0 },
@@ -147,7 +146,7 @@ int main(int argc, char* argv[])
 		);
 	
 
-	if (1)
+	if (0)
 		Taubin(triangulation, VertexNeighbours, 0.33, -0.331, 15);
 
 	std::string filename = "";
@@ -157,7 +156,10 @@ int main(int argc, char* argv[])
 	else
 		filename = outputFileName;
 
-	WriteStlASCII(triangulation, filename);
+	if (0)
+		WriteStlASCII(triangulation, filename);
+	else
+		WriteSTLBinary(triangulation, filename);
 
 	return EXIT_SUCCESS;
 }

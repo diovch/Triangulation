@@ -774,18 +774,18 @@ void Triangulate_Custom(
     //                                           si = +-1
     std::map<Voxel, int> vertexIndices;
 
-    //for (int slice = sliceFinish * 1 / 2; slice <= sliceFinish; ++slice)
-    //{
-    //    for (int iy = iymax * 1 / 3; iy <= iymax; ++iy) 
-    //    {
-    //        for (int ix = ixmax * 1 / 2; ix <= ixmax * 3 / 4; ++ix) 
-    //        {
-    for (int slice = sliceStart; slice <= sliceFinish; ++slice)
+    for (int slice = sliceFinish * 1 / 2; slice <= sliceFinish; ++slice)
     {
-        for (int iy = iymin; iy <= iymax; ++iy)
+        for (int iy = iymax * 1 / 3; iy <= iymax; ++iy) 
         {
-            for (int ix = ixmin; ix <= ixmax; ++ix)
+            for (int ix = ixmax * 1 / 2; ix <= ixmax * 3 / 4; ++ix) 
             {
+    //for (int slice = sliceStart; slice <= sliceFinish; ++slice)
+    //{
+    //    for (int iy = iymin; iy <= iymax; ++iy)
+    //    {
+    //        for (int ix = ixmin; ix <= ixmax; ++ix)
+    //        {
                 if (voxelSet.voxelAt(slice, ix, iy) == 0)
                     continue;
 
@@ -881,6 +881,8 @@ void Triangulate_Custom(
                             neighbourCenter = topCenter;
                         }
 
+                        const R3Vector outside = (neighbourCenter - cubeCenter).normalize();
+
                         if (
                             vertexIndices.count(extendedNeighbour) == 0) {
                             // Add vertex to triangulation
@@ -901,7 +903,7 @@ void Triangulate_Custom(
                                 indices[i], indices[j], indices[8]
                             )
                         );
-                        InitializeNormal_Custom(face, triangulation.triangles.back().Normal);
+                        InitializeNormal_Custom(face, triangulation, outside);
                         {
                             std::vector<int> ind = { indices[i], indices[j], indices[8] };
                             FillNeighbours(VerxteNeighbours, ind);
@@ -912,7 +914,7 @@ void Triangulate_Custom(
                                 indices[j], indices[k], indices[8]
                             )
                         );
-                        InitializeNormal_Custom(face, triangulation.triangles.back().Normal);
+                        InitializeNormal_Custom(face, triangulation, outside);
                         {
                             std::vector<int> ind = { indices[j], indices[k], indices[8] };
                             FillNeighbours(VerxteNeighbours, ind);
@@ -924,7 +926,7 @@ void Triangulate_Custom(
                                 indices[k], indices[l], indices[8]
                             )
                         );
-                        InitializeNormal_Custom(face, triangulation.triangles.back().Normal);
+                        InitializeNormal_Custom(face, triangulation, outside);
                         {
                             std::vector<int> ind = { indices[k], indices[l], indices[8] };
                             FillNeighbours(VerxteNeighbours, ind);
@@ -936,7 +938,7 @@ void Triangulate_Custom(
                                 indices[l], indices[i], indices[8]
                             )
                         );
-                        InitializeNormal_Custom(face, triangulation.triangles.back().Normal);
+                        InitializeNormal_Custom(face, triangulation, outside);
                         {
                             std::vector<int> ind = { indices[l], indices[i], indices[8] };
                             FillNeighbours(VerxteNeighbours, ind);
@@ -948,23 +950,17 @@ void Triangulate_Custom(
     }
 }
 
-void InitializeNormal_Custom(const Voxel::Face& face, R3Graph::R3Vector& Normal)
+void InitializeNormal_Custom(const Voxel::Face& face, Triangulation& triangulation, const R3Vector& outside)
 {//TODO Repair Normals
-    if (face == Voxel::Face::FACE_FRONT)
-        Normal = { 0., -1., 0. };
+    Triangulation::Triangle& t = triangulation.triangles.back();
 
-    else if (face == Voxel::Face::FACE_BACK)
-        Normal = { 0., 1., 0. };
+    R3Point& p0 = triangulation.vertices.at(t.indices[0]).point;
+    R3Point& p1 = triangulation.vertices.at(t.indices[1]).point;
+    R3Point& p2 = triangulation.vertices.at(t.indices[2]).point;
 
-    else if (face == Voxel::Face::FACE_LEFT)
-        Normal = { -1., 0., 0. };
+    t.Normal = (p0 - p1).crossProduct(p2 - p1);
+    t.Normal.normalize();
 
-    else if (face == Voxel::Face::FACE_RIGHT)
-        Normal = { 1., 0., 0. };
-
-    else if (face == Voxel::Face::FACE_BOTTOM)
-        Normal = { 0., 0., -1. };
-
-    else if (face == Voxel::Face::FACE_TOP)
-        Normal = { 0., 0., 1. };
+    if (t.Normal.scalarProduct(outside) < 0.)
+        t.Normal *= (-1);
 }

@@ -394,7 +394,7 @@ void Triangulate_Custom(
     const R3Graph::R3Point& origin,
     double dx, double dy, double dz);
 
-void InitializeNormal_Custom(const Voxel::Face& face, R3Graph::R3Vector& Normal);
+void InitializeNormal_Custom(const Voxel::Face& face, Triangulation& triangulation, const R3Graph::R3Vector& outside);
 
 void ContourSegmentation(VoxelSet& voxelSet, const Voxel& seed);
 
