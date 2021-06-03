@@ -9,8 +9,10 @@
 #include "Segmentation.h"
 #include "STL.h"
 
+#include <string>
 
-Voxel SearchSeed(short*, unsigned char* , unsigned char , int, VoxelBox&);
+
+Voxel SearchSeed(short*, unsigned char*, unsigned char, int, VoxelBox&);
 void WriteStlASCII(const Triangulation&, std::ofstream&);
 
 int main(int argc, char* argv[])
@@ -29,25 +31,25 @@ int main(int argc, char* argv[])
 	short threshold = 0;
 	double sigma = 0.;
 
-	for (int i = 1; i < argc; ++i) 
+	for (int i = 1; i < argc; ++i)
 	{
 		auto parameter = std::string(argv[i]);
-		if (parameter == "-i") 
+		if (parameter == "-i")
 		{
 			inputFileName = argv[++i];
 			continue;
 		}
-		else if (parameter == "-t") 
+		else if (parameter == "-t")
 		{
 			threshold = std::stod(argv[++i]);
 			continue;
 		}
-		else if (parameter == "-m") 
+		else if (parameter == "-m")
 		{
 			maskFileName = argv[++i];
 			continue;
 		}
-		else if (parameter == "-o") 
+		else if (parameter == "-o")
 		{
 			outputFileName = argv[++i];
 			continue;
@@ -109,10 +111,10 @@ int main(int argc, char* argv[])
 	auto scale = image->GetSpacing();
 	auto x_sc = scale[0], y_sc = scale[1], z_sc = scale[2];
 
-	VoxelBox voxelBoxOfImage(Voxel (0, (0,0)), xMax, yMax, MaxSlices); 
+	VoxelBox voxelBoxOfImage(Voxel(0, (0, 0)), xMax, yMax, MaxSlices);
 	Voxel seed = SearchSeed(pointer, mask_pointer, maskLabel, threshold, voxelBoxOfImage);
 	VoxelSet voxelSet;
-	
+
 	detectVoxelSetFromCta(
 		threshold,
 		voxelBoxOfImage,
@@ -121,14 +123,14 @@ int main(int argc, char* argv[])
 		mask_pointer,
 		maskLabel,
 		voxelSet);
-	
-	if(0)
+
+	if (0)
 		FillVoids(voxelSet);
-	
+
 	Triangulation triangulation;
 	std::map<int, std::set<int>> VertexNeighbours;
-	
-	if (0)
+
+	if (1)
 		computeTriangulationOfVoxelSet(
 			VertexNeighbours,
 			triangulation,
@@ -144,14 +146,14 @@ int main(int argc, char* argv[])
 			{ 0,0,0 },
 			x_sc, y_sc, z_sc
 		);
-	
+
 
 	if (0)
 		Taubin(triangulation, VertexNeighbours, 0.33, -0.331, 15);
 
 	std::string filename = "";
 
-	if (outputFileName == "")
+	if (std::string(outputFileName).empty())
 		filename = "IsoSurface.stl";
 	else
 		filename = outputFileName;
@@ -167,12 +169,12 @@ int main(int argc, char* argv[])
 
 
 
-Voxel SearchSeed(short* pointer, unsigned char* mask_pointer, unsigned char maskLabel, int threshold, VoxelBox& voxelBox) 
+Voxel SearchSeed(short* pointer, unsigned char* mask_pointer, unsigned char maskLabel, int threshold, VoxelBox& voxelBox)
 {
 	Voxel seed;
 	int num_seed = 0;
 	int xMax = voxelBox.width, yMax = voxelBox.depth, MaxSlices = voxelBox.height;
-	
+
 	//for (int k = MaxSlices * 1 / 10; k < MaxSlices * 9 / 10; ++k)
 	//{
 	//	for (int i = xMax * 1 / 10; i < xMax * 9 / 10; ++i)
