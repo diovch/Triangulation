@@ -2,15 +2,15 @@
 #include "R3Graph.h"
 #include <fstream>
 #include <iomanip>
-//TODO Tune WriteBinarySTL()
+
 void WriteSTLBinary(const Triangulation& triangulation, std::string& filename)
 {
 	std::ofstream out;
-	filename = "C:\\Users\\owchi\\source\\repos\\TEST\\bin\\" + filename;
+	// Check path after merging
+	//filename = "C:\\Users\\owchi\\source\\repos\\Triangulation\\bin64\\" + filename;
 	out.open(filename, std::ios::out | std::ios::binary);
 	if (out.is_open())
 	{
-
 		char header[80];
 		std::memset(header, 0, 80);
 		out.write(header, 80);

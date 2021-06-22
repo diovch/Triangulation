@@ -774,18 +774,18 @@ void Triangulate_Custom(
     //                                           si = +-1
     std::map<Voxel, int> vertexIndices;
 
-    for (int slice = sliceFinish * 1 / 2; slice <= sliceFinish; ++slice)
-    {
-        for (int iy = iymax * 1 / 3; iy <= iymax; ++iy) 
-        {
-            for (int ix = ixmax * 1 / 2; ix <= ixmax * 3 / 4; ++ix) 
-            {
-    //for (int slice = sliceStart; slice <= sliceFinish; ++slice)
+    //for (int slice = sliceFinish * 1 / 2; slice <= sliceFinish; ++slice)
     //{
-    //    for (int iy = iymin; iy <= iymax; ++iy)
+    //    for (int iy = iymax * 1 / 3; iy <= iymax; ++iy) 
     //    {
-    //        for (int ix = ixmin; ix <= ixmax; ++ix)
+    //        for (int ix = ixmax * 1 / 2; ix <= ixmax * 3 / 4; ++ix) 
     //        {
+    for (int slice = sliceStart; slice <= sliceFinish; ++slice)
+    {
+        for (int iy = iymin; iy <= iymax; ++iy)
+        {
+            for (int ix = ixmin; ix <= ixmax; ++ix)
+            {
                 if (voxelSet.voxelAt(slice, ix, iy) == 0)
                     continue;
 

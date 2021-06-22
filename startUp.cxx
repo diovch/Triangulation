@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
 	Triangulation triangulation;
 	std::map<int, std::set<int>> VertexNeighbours;
 
-	if (1)
+	if (0)
 		computeTriangulationOfVoxelSet(
 			VertexNeighbours,
 			triangulation,
@@ -148,7 +148,7 @@ int main(int argc, char* argv[])
 		);
 
 
-	if (0)
+	if (1)
 		Taubin(triangulation, VertexNeighbours, 0.33, -0.331, 15);
 
 	std::string filename = "";
