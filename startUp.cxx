@@ -115,7 +115,8 @@ int main(int argc, char* argv[])
 	Voxel seed = SearchSeed(pointer, mask_pointer, maskLabel, threshold, voxelBoxOfImage);
 	VoxelSet voxelSet;
 
-	detectVoxelSetFromCta(
+	if(0)
+		detectVoxelSetFromCta(
 		threshold,
 		voxelBoxOfImage,
 		seed,
@@ -123,6 +124,14 @@ int main(int argc, char* argv[])
 		mask_pointer,
 		maskLabel,
 		voxelSet);
+	else
+		detectVoxelSetFromCta_Full(
+			threshold,
+			voxelBoxOfImage,
+			pointer,
+			mask_pointer,
+			maskLabel,
+			voxelSet);
 
 	if (0)
 		FillVoids(voxelSet);
@@ -148,8 +157,10 @@ int main(int argc, char* argv[])
 		);
 
 
-	if (1)
-		Taubin(triangulation, VertexNeighbours, 0.33, -0.331, 15);
+	if (0)
+		Taubin(triangulation, VertexNeighbours, 0.33, -0.331, 35);
+	else
+		TaubinSkeleton(triangulation, VertexNeighbours, 0.33, -0.331, 35);
 
 	std::string filename = "";
 

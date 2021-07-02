@@ -305,6 +305,15 @@ double detectVoxelSetFromCta(
     VoxelSet& voxelSet
 );
 
+void detectVoxelSetFromCta_Full(
+    double threshold,
+    const VoxelBox& voxelBox,
+    short* pointer,
+    unsigned char* mask_pointer,
+    unsigned char maskLabel,
+    VoxelSet& voxelSet
+);
+
 void computeTriangulationOfVoxelSet(
     std::map<int, std::set<int>>& neighbours,
     Triangulation& triangulation,
@@ -404,8 +413,8 @@ Voxel RightHandNeighbour(const Voxel& bug, const DirectionOfMovement& direction)
 
 void TurnLeft(DirectionOfMovement& direction);
 
-unsigned char VoxelType(const Voxel& v, unsigned char* p);
+unsigned char VoxelType(const Voxel& v, unsigned char* p, int width, int height);
 
-short VoxelDensity(const Voxel&, short*);
+short VoxelDensity(const Voxel&, short*, int width, int height);
 
 #endif

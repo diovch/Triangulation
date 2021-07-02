@@ -74,6 +74,42 @@ double detectVoxelSet(
 }
 
 // my realization with image pointer
+void detectVoxelSetFromCta_Full(
+    double threshold,
+    const VoxelBox& voxelBox,
+    short* pointer,
+    unsigned char* mask_pointer,
+    unsigned char maskLabel,
+    VoxelSet& voxelSet
+) {
+    int sliceStart = voxelBox.origin.slice;
+    int sliceFinish = sliceStart + voxelBox.height - 1;
+    int xmax = voxelBox.width, ymax = voxelBox.depth;
+    int zmax = voxelBox.height;
+    
+    voxelSet.initialize(xmax, ymax, zmax);
+
+#pragma omp parallel for
+    for (int k = 0; k < zmax; ++k)
+    {
+        for (int i = 0; i < xmax; ++i)
+        {
+            for (int j = 0; j < ymax; ++j)
+            {
+                Voxel currentVoxel(k, { i, j });
+                if (VoxelDensity(currentVoxel, pointer, xmax, ymax) > threshold &&
+                    VoxelType(currentVoxel, mask_pointer, xmax, ymax) == maskLabel)
+                {
+                    voxelSet.addVoxel(currentVoxel, ROI_POSITIVE);
+                }
+            }
+        }
+    }
+    voxelSet.detected3D = true;
+    return ;
+}
+
+// my realization with image pointer
 double detectVoxelSetFromCta(
     double threshold,
     const VoxelBox& voxelBox,
@@ -93,7 +129,7 @@ double detectVoxelSetFromCta(
     if (seed.slice < sliceStart || seed.slice > sliceFinish)
         return 0.;
 
-    if (VoxelDensity(seed, pointer) < threshold || VoxelType(seed, mask_pointer) != maskLabel)
+    if (VoxelDensity(seed, pointer, xmax, ymax) < threshold || VoxelType(seed, mask_pointer, xmax, ymax) != maskLabel)
         return 0.;
 
     std::deque<Voxel> deq;
@@ -116,7 +152,7 @@ double detectVoxelSetFromCta(
                 continue;   // Voxel is already in the set
 
             
-            if (VoxelDensity(n, pointer) < threshold || VoxelType(n, mask_pointer) != maskLabel)
+            if (VoxelDensity(n, pointer, xmax, ymax) < threshold || VoxelType(n, mask_pointer, xmax, ymax) != maskLabel)
                 continue;
 
             voxelSet.addVoxel(n, ROI_POSITIVE);
@@ -367,15 +403,15 @@ void TurnLeft(DirectionOfMovement& direction)
     }
 }
 
-unsigned char VoxelType(const Voxel& v, unsigned char* p)
+unsigned char VoxelType(const Voxel& v, unsigned char* p, int width, int height)
 {
-    auto VoxelPointer = p + (v.point.x + v.point.y * 512 + v.slice * 512 * 512);
+    auto VoxelPointer = p + (v.point.x + v.point.y * width + v.slice * width * height);
     return *VoxelPointer;
 }
 
 
-short VoxelDensity(const Voxel& v, short* p)
+short VoxelDensity(const Voxel& v, short* p, int width, int height)
 {
-    auto VoxelPointer = p + (v.point.x + v.point.y * 512 + v.slice * 512 * 512);
+    auto VoxelPointer = p + (v.point.x + v.point.y * width + v.slice * width * height);
     return *VoxelPointer;
 }
