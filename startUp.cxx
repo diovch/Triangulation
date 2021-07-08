@@ -157,9 +157,8 @@ int main(int argc, char* argv[])
 		);
 
 
-	if (0)
-		Taubin(triangulation, VertexNeighbours, 0.33, -0.331, 35);
-	else
+	if (1)
+	//	Taubin(triangulation, VertexNeighbours, 0.33, -0.331, 35);
 		TaubinSkeleton(triangulation, VertexNeighbours, 0.33, -0.331, 35);
 
 	std::string filename = "";

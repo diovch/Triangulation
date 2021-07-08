@@ -774,18 +774,18 @@ void Triangulate_Custom(
     //                                           si = +-1
     std::map<Voxel, int> vertexIndices;
 
-    //for (int slice = sliceFinish * 1 / 2; slice <= sliceFinish; ++slice)
-    //{
-    //    for (int iy = iymax * 1 / 3; iy <= iymax; ++iy) 
-    //    {
-    //        for (int ix = ixmax * 1 / 2; ix <= ixmax * 3 / 4; ++ix) 
-    //        {
-    for (int slice = sliceStart; slice <= sliceFinish; ++slice)
+    for (int slice = sliceFinish * 1 / 2; slice <= sliceFinish; ++slice)
     {
-        for (int iy = iymin; iy <= iymax; ++iy)
+        for (int iy = iymax * 1 / 3; iy <= iymax; ++iy) 
         {
-            for (int ix = ixmin; ix <= ixmax; ++ix)
+            for (int ix = ixmax * 1 / 2; ix <= ixmax * 3 / 4; ++ix) 
             {
+    //for (int slice = sliceStart; slice <= sliceFinish; ++slice)
+    //{
+    //    for (int iy = iymin; iy <= iymax; ++iy)
+    //    {
+    //        for (int ix = ixmin; ix <= ixmax; ++ix)
+    //        {
                 if (voxelSet.voxelAt(slice, ix, iy) == 0)
                     continue;
 
@@ -818,7 +818,7 @@ void Triangulate_Custom(
                 Voxel extendedVoxels[8];
                 InitializeExtendedVoxels(extendedVoxels, cube);
 
-                int indices[9]; // Indices of vertices in array
+                int indices[9]; // Indices of vertices in array of all verticies
                 for (int iv = 0; iv < 9; ++iv)
                     indices[iv] = (-1);
 
@@ -897,52 +897,10 @@ void Triangulate_Custom(
                             indices[8] = vertexIndices[extendedNeighbour];
                         }
 
-                        // 1
-                        triangulation.triangles.push_back(
-                            Triangulation::Triangle(
-                                indices[i], indices[j], indices[8]
-                            )
-                        );
-                        InitializeNormal_Custom(face, triangulation, outside);
-                        {
-                            std::vector<int> ind = { indices[i], indices[j], indices[8] };
-                            FillNeighbours(VerxteNeighbours, ind);
-                        }
-                        // 2
-                        triangulation.triangles.push_back(
-                            Triangulation::Triangle(
-                                indices[j], indices[k], indices[8]
-                            )
-                        );
-                        InitializeNormal_Custom(face, triangulation, outside);
-                        {
-                            std::vector<int> ind = { indices[j], indices[k], indices[8] };
-                            FillNeighbours(VerxteNeighbours, ind);
-                        }
-
-                        // 3
-                        triangulation.triangles.push_back(
-                            Triangulation::Triangle(
-                                indices[k], indices[l], indices[8]
-                            )
-                        );
-                        InitializeNormal_Custom(face, triangulation, outside);
-                        {
-                            std::vector<int> ind = { indices[k], indices[l], indices[8] };
-                            FillNeighbours(VerxteNeighbours, ind);
-                        }
-
-                        // 4 
-                        triangulation.triangles.push_back(
-                            Triangulation::Triangle(
-                                indices[l], indices[i], indices[8]
-                            )
-                        );
-                        InitializeNormal_Custom(face, triangulation, outside);
-                        {
-                            std::vector<int> ind = { indices[l], indices[i], indices[8] };
-                            FillNeighbours(VerxteNeighbours, ind);
-                        }
+                        AddTriangle(triangulation, outside, face, VerxteNeighbours, indices[i], indices[j], indices[8]);
+                        AddTriangle(triangulation, outside, face, VerxteNeighbours, indices[j], indices[k], indices[8]);
+                        AddTriangle(triangulation, outside, face, VerxteNeighbours, indices[k], indices[l], indices[8]);
+                        AddTriangle(triangulation, outside, face, VerxteNeighbours, indices[l], indices[i], indices[8]);
                     }
                 }
             }
@@ -950,17 +908,35 @@ void Triangulate_Custom(
     }
 }
 
+void AddTriangle(Triangulation& t, const R3Graph::R3Vector& outside, const Voxel::Face& face, std::map<int, std::set<int>>& VerxteNeighbours,
+    int ind1, int ind2, int ind3)
+{
+    t.triangles.push_back(
+        Triangulation::Triangle(ind1, ind2, ind3));
+
+    InitializeNormal_Custom(face, t, outside);
+
+    std::vector<int> ind = { ind1, ind2, ind3 };
+    FillNeighbours(VerxteNeighbours, ind);
+}
+
 void InitializeNormal_Custom(const Voxel::Face& face, Triangulation& triangulation, const R3Vector& outside)
-{//TODO Repair Normals
-    Triangulation::Triangle& t = triangulation.triangles.back();
+{
+    Triangulation::Triangle& triangle = triangulation.triangles.back();
 
-    R3Point& p0 = triangulation.vertices.at(t.indices[0]).point;
-    R3Point& p1 = triangulation.vertices.at(t.indices[1]).point;
-    R3Point& p2 = triangulation.vertices.at(t.indices[2]).point;
+    R3Point& p0 = triangulation.vertices.at(triangle.indices[0]).point;
+    R3Point& p1 = triangulation.vertices.at(triangle.indices[1]).point;
+    R3Point& p2 = triangulation.vertices.at(triangle.indices[2]).point;
 
-    t.Normal = (p0 - p1).crossProduct(p2 - p1);
-    t.Normal.normalize();
+    triangle.Normal = (p0 - p1).crossProduct(p2 - p1);
+    triangle.Normal.normalize();
 
-    if (t.Normal.scalarProduct(outside) < 0.)
-        t.Normal *= (-1);
+    if (triangle.Normal.scalarProduct(outside) < 0.)
+    {
+        triangle.Normal *= (-1);
+    }
+    else
+    {
+        std::swap(triangle.indices[1], triangle.indices[2]); // clockwise order requirement for stl format
+    }
 }

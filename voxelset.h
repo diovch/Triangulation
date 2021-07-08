@@ -417,4 +417,7 @@ unsigned char VoxelType(const Voxel& v, unsigned char* p, int width, int height)
 
 short VoxelDensity(const Voxel&, short*, int width, int height);
 
+void AddTriangle(Triangulation& t, const R3Graph::R3Vector& outside, const Voxel::Face& face, std::map<int, std::set<int>>& VerxteNeighbours,
+    int ind1, int ind2, int ind3);
+
 #endif
